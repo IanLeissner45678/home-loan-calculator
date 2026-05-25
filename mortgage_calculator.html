@@ -1,0 +1,2950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Home Mortgage Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #1a1f2a;
+    --panel-2: #232936;
+    --border: #2d3441;
+    --text: #e8ecf1;
+    --muted: #8b95a7;
+    --accent: #4ade80;
+    --accent-2: #60a5fa;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --good: #34d399;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.15);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  header h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  main {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 24px;
+    padding: 24px 32px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .panel h2 {
+    margin: 0 0 16px;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .panel h3 {
+    margin: 20px 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent-2);
+  }
+  .panel h3:first-child { margin-top: 0; }
+
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .field label .value {
+    color: var(--text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  input[type="number"], input[type="text"], select {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    width: 100%;
+    font-variant-numeric: tabular-nums;
+  }
+  input[type="number"]:focus, select:focus {
+    outline: none;
+    border-color: var(--accent-2);
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent-2);
+  }
+  .toggle-row {
+    display: flex;
+    gap: 6px;
+    background: var(--panel-2);
+    padding: 3px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .toggle-row button {
+    flex: 1;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .toggle-row button.active {
+    background: var(--accent-2);
+    color: white;
+  }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 900px) { .results-grid { grid-template-columns: repeat(2, 1fr); } }
+  .metric {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .metric .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric .number { font-size: 22px; font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .metric.accent .number { color: var(--accent); }
+  .metric.warn .number { color: var(--warn); }
+  .metric.info .number { color: var(--accent-2); }
+
+  .payment-bar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+  .payment-bar:last-child { border-bottom: none; }
+  .payment-bar .label { display: flex; align-items: center; gap: 8px; }
+  .swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .tabs button {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tabs button.active {
+    color: var(--text);
+    border-bottom-color: var(--accent-2);
+  }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+  .tabs button.hidden-tab { display: none; }
+  .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .toggle-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+  }
+  th, td {
+    text-align: right;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  th:first-child, td:first-child { text-align: left; }
+  thead th {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--panel-2);
+    position: sticky;
+    top: 0;
+  }
+  .scrolling-table {
+    max-height: 420px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
+  .chart-wrap {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    height: 320px;
+    position: relative;
+  }
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .chart-row { grid-template-columns: 1fr; } }
+
+  .btn {
+    background: var(--accent-2);
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+  .btn.danger { background: transparent; color: var(--bad); border: 1px solid var(--border); padding: 4px 8px; font-size: 11px; }
+
+  .scenario-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .scenario-card {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .scenario-card .meta { font-size: 11px; color: var(--muted); }
+  .scenario-card .name { font-weight: 600; }
+
+  .compare-table th, .compare-table td { text-align: right; }
+  .compare-table th:first-child, .compare-table td:first-child { text-align: left; color: var(--muted); }
+
+  .delta-pos { color: var(--good); }
+  .delta-neg { color: var(--bad); }
+
+  .help {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+  details { margin-top: 12px; }
+  details summary { cursor: pointer; color: var(--accent-2); font-size: 12px; }
+  details[open] summary { margin-bottom: 8px; }
+
+  .badge {
+    display: inline-block;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+  .badge.on { background: rgba(74, 222, 128, 0.15); color: var(--accent); border-color: rgba(74, 222, 128, 0.3); }
+  .muted { color: var(--muted); font-size: 12px; }
+  .label-text { display: inline-flex; align-items: center; }
+
+  /* Tooltip system */
+  .tip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--panel-2);
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 700;
+    cursor: help;
+    margin-left: 6px;
+    border: 1px solid var(--border);
+    user-select: none;
+    transition: all 0.15s;
+  }
+  .tip:hover {
+    color: var(--accent-2);
+    border-color: var(--accent-2);
+    background: rgba(96, 165, 250, 0.1);
+  }
+  .tip-pop {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 280px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    /* Bottom margin creates the visual gap while keeping mouse path continuous via the bridge below */
+    margin-bottom: 14px;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.12s, visibility 0.12s;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--text);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    pointer-events: none;
+  }
+  /* Invisible bridge that fills the visual gap so hover doesn't break */
+  .tip-pop::before {
+    content: '';
+    position: absolute;
+    bottom: -14px;
+    left: 0;
+    right: 0;
+    height: 14px;
+  }
+  /* Triangle pointer */
+  .tip-pop::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--border);
+  }
+  .tip:hover .tip-pop,
+  .tip-pop:hover {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .tip-pop strong { color: var(--accent-2); }
+  .tip-pop a {
+    color: var(--accent);
+    text-decoration: none;
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 11px;
+    border-bottom: 1px dotted var(--accent);
+  }
+  .tip-pop a:hover { color: white; border-bottom-color: white; }
+  .tip-pop .links {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .tip-pop .links-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  /* When tooltip would be cut off near top of viewport, flip below */
+  .tip-pop.below {
+    bottom: auto;
+    top: 100%;
+    margin-bottom: 0;
+    margin-top: 14px;
+  }
+  .tip-pop.below::after {
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-bottom-color: var(--border);
+  }
+  .tip-pop.below::before {
+    top: -14px;
+    bottom: auto;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Home Mortgage Calculator</h1>
+  <p>Interactive scenarios for purchase, ownership cost, appreciation, and rent vs. buy.</p>
+</header>
+
+<main>
+  <!-- INPUTS -->
+  <aside class="panel" id="inputs">
+    <h3>Loan</h3>
+    <div class="field">
+      <label>Home price <span class="value" id="lbl_price">$500,000</span></label>
+      <input type="number" id="price" value="500000" step="5000" min="0" />
+    </div>
+    <div class="field">
+      <label>
+        Down payment
+        <span class="value">
+          <span id="lbl_down_pct">20%</span> · <span id="lbl_down_amt">$100,000</span>
+        </span>
+      </label>
+      <div class="toggle-row">
+        <button data-mode="pct" class="active" id="tg_pct">%</button>
+        <button data-mode="amt" id="tg_amt">$</button>
+      </div>
+      <div style="height: 8px;"></div>
+      <input type="number" id="downValue" value="20" step="1" min="0" />
+    </div>
+    <div class="field">
+      <label>Interest rate <span class="value" id="lbl_rate">6.50%</span></label>
+      <input type="number" id="rate" value="6.5" step="0.05" min="0" />
+    </div>
+    <div class="field">
+      <label>Loan term <span class="value" id="lbl_term">30 years</span></label>
+      <select id="term">
+        <option>10</option><option>15</option><option>20</option>
+        <option selected>30</option>
+      </select>
+    </div>
+
+    <h3>Recurring costs</h3>
+    <div class="field">
+      <label>Property tax (annual %) <span class="value" id="lbl_tax">1.20%</span></label>
+      <input type="number" id="taxPct" value="1.2" step="0.05" min="0" />
+    </div>
+    <div class="field">
+      <label>Property tax growth (annual %) <span class="value" id="lbl_taxGrowth">2.00%</span></label>
+      <input type="number" id="taxGrowth" value="2.0" step="0.25" />
+      <div class="help">How fast assessed value (and tax) grows. Some states cap this (e.g. CA Prop 13 = 2%).</div>
+    </div>
+    <div class="field">
+      <label>Home insurance ($/yr) <span class="value" id="lbl_ins">$1,800</span></label>
+      <input type="number" id="ins" value="1800" step="100" min="0" />
+    </div>
+    <div class="field">
+      <label>Insurance growth (annual %) <span class="value" id="lbl_insGrowth">5.00%</span></label>
+      <input type="number" id="insGrowth" value="5.0" step="0.25" />
+      <div class="help">Premiums often rise 4–7%/yr; climate-affected areas can be higher.</div>
+    </div>
+    <div class="field">
+      <label>HOA ($/mo) <span class="value" id="lbl_hoa">$0</span></label>
+      <input type="number" id="hoa" value="0" step="25" min="0" />
+    </div>
+    <div class="field">
+      <label>PMI rate (annual %) <span class="value" id="lbl_pmi">0.60%</span></label>
+      <input type="number" id="pmiPct" value="0.6" step="0.05" min="0" />
+      <div class="help">PMI applies until equity reaches 20% of the original purchase price.</div>
+    </div>
+
+    <h3>Appreciation & costs</h3>
+    <div class="field">
+      <label>Home appreciation (annual %) <span class="value" id="lbl_appr">3.50%</span></label>
+      <input type="number" id="appr" value="3.5" step="0.1" />
+    </div>
+    <div class="field">
+      <label>Maintenance (% of home value/yr) <span class="value" id="lbl_maint">1.00%</span></label>
+      <input type="number" id="maint" value="1.0" step="0.1" min="0" />
+    </div>
+    <div class="field">
+      <label>Closing costs (% of price) <span class="value" id="lbl_close">3.00%</span></label>
+      <input type="number" id="closePct" value="3.0" step="0.25" min="0" />
+    </div>
+    <div class="field">
+      <label>Selling costs (% of sale) <span class="value" id="lbl_sell">6.00%</span></label>
+      <input type="number" id="sellPct" value="6.0" step="0.25" min="0" />
+    </div>
+
+    <h3>Extra payments</h3>
+    <div class="field">
+      <label>Extra monthly principal ($) <span class="value" id="lbl_extra">$0</span></label>
+      <input type="number" id="extra" value="0" step="50" min="0" />
+    </div>
+
+    <h3>Rent vs. buy</h3>
+    <div class="field">
+      <label>Current rent ($/mo) <span class="value" id="lbl_rent">$2,500</span></label>
+      <input type="number" id="rent" value="2500" step="100" min="0" />
+    </div>
+    <div class="field">
+      <label>Annual rent increase (%) <span class="value" id="lbl_rentInc">3.00%</span></label>
+      <input type="number" id="rentInc" value="3.0" step="0.25" />
+    </div>
+    <div class="field">
+      <label>Investment return on down payment (%) <span class="value" id="lbl_invRet">7.00%</span></label>
+      <input type="number" id="invRet" value="7.0" step="0.25" />
+      <div class="help">Opportunity cost: what the down payment + closing costs could earn invested.</div>
+    </div>
+
+    <h3>Cash to close</h3>
+    <div class="field">
+      <label>Initial repairs / move-in ($) <span class="value" id="lbl_movein">$5,000</span></label>
+      <input type="number" id="movein" value="5000" step="500" min="0" />
+      <div class="help">Furniture, minor repairs, immediate fixes — lump-sum at move-in.</div>
+    </div>
+    <div class="field">
+      <label>Required reserves (months PITI) <span class="value" id="lbl_reserveMos">2</span></label>
+      <input type="number" id="reserveMos" value="2" step="1" min="0" />
+      <div class="help">Most lenders want 2–6 months of PITI in cash reserves after closing.</div>
+    </div>
+
+    <h3>Savings & assets</h3>
+    <div class="field">
+      <label>Current liquid assets ($) <span class="value" id="lbl_liquid">$150,000</span></label>
+      <input type="number" id="liquid" value="150000" step="5000" min="0" />
+      <div class="help">Cash + brokerage + savings. Excluding retirement accounts.</div>
+    </div>
+    <div class="field">
+      <label>Monthly savings ($/mo) <span class="value" id="lbl_savings">$2,000</span></label>
+      <input type="number" id="savings" value="2000" step="100" min="0" />
+    </div>
+    <div class="field">
+      <label>Monthly household expenses ($) <span class="value" id="lbl_expenses">$6,000</span></label>
+      <input type="number" id="expenses" value="6000" step="100" min="0" />
+      <div class="help">Food, utilities, transport, etc — excluding the mortgage.</div>
+    </div>
+    <div class="field">
+      <label>Emergency fund target (months) <span class="value" id="lbl_emerg">6</span></label>
+      <input type="number" id="emerg" value="6" step="1" min="0" />
+    </div>
+    <div class="field">
+      <label>Max % of liquid for down payment <span class="value" id="lbl_maxLiqPct">50%</span></label>
+      <input type="number" id="maxLiqPct" value="50" step="5" min="1" max="100" />
+      <div class="help">Concentration cap: caps the down payment to a share of your liquid assets, regardless of how big your emergency fund is.</div>
+    </div>
+
+    <h3>Taxes</h3>
+    <div class="field">
+      <label>Filing status</label>
+      <select id="filing">
+        <option value="married" selected>Married filing jointly</option>
+        <option value="single">Single</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Marginal federal tax rate (%) <span class="value" id="lbl_marg">24%</span></label>
+      <input type="number" id="marg" value="24" step="1" min="0" max="50" />
+    </div>
+    <div class="field">
+      <label>Other SALT taxes paid ($/yr) <span class="value" id="lbl_salt">$8,000</span></label>
+      <input type="number" id="salt" value="8000" step="500" min="0" />
+      <div class="help">State + local income/other taxes. Combined w/ property tax, capped at $10K SALT deduction.</div>
+    </div>
+    <div class="field">
+      <label>LTCG rate at sale (%) <span class="value" id="lbl_ltcg">15%</span></label>
+      <input type="number" id="ltcg" value="15" step="1" min="0" max="40" />
+      <div class="help">Long-term capital gains tax rate (federal: 0/15/20%). Used only if gain exceeds exclusion.</div>
+    </div>
+
+    <h3>Retirement</h3>
+    <div class="field">
+      <label>Gross annual income ($) <span class="value" id="lbl_income">$150,000</span></label>
+      <input type="number" id="income" value="150000" step="5000" min="0" />
+      <div class="help">Household gross income. Used for retirement contribution analysis.</div>
+    </div>
+    <div class="field">
+      <label>Current 401k contribution (%) <span class="value" id="lbl_retire401k">10%</span></label>
+      <input type="number" id="retire401k" value="10" step="1" min="0" max="100" />
+      <div class="help">Your pre-tax 401k contribution as % of gross income.</div>
+    </div>
+    <div class="field">
+      <label>Employer match (%) <span class="value" id="lbl_empMatch">50%</span></label>
+      <input type="number" id="empMatch" value="50" step="10" min="0" max="100" />
+      <div class="help">Employer matches this % of your contribution (e.g., 50% = $0.50 per $1 you contribute).</div>
+    </div>
+    <div class="field">
+      <label>Match cap (% of salary) <span class="value" id="lbl_matchCap">6%</span></label>
+      <input type="number" id="matchCap" value="6" step="1" min="0" max="20" />
+      <div class="help">Employer only matches up to this % of your salary (common: 3-6%).</div>
+    </div>
+    <div class="field">
+      <label>Expected investment return (%) <span class="value" id="lbl_retireReturn">7%</span></label>
+      <input type="number" id="retireReturn" value="7" step="0.5" min="0" max="15" />
+      <div class="help">Long-term expected return on retirement investments.</div>
+    </div>
+    <div class="field">
+      <label>Years to retirement <span class="value" id="lbl_retireYears">25</span></label>
+      <input type="number" id="retireYears" value="25" step="1" min="1" max="50" />
+      <div class="help">How many years until you retire. Used to project retirement balance impact.</div>
+    </div>
+
+    <h3>Refinance</h3>
+    <div class="field">
+      <label>Include refi in analysis?</label>
+      <div class="toggle-row">
+        <button data-mode="off" class="active" id="tg_refiOff">Off</button>
+        <button data-mode="on" id="tg_refiOn">On</button>
+      </div>
+      <div class="help">Toggle off if you don't plan to refinance. Inputs below are ignored when off.</div>
+    </div>
+    <div class="field">
+      <label>Refinance at year <span class="value" id="lbl_refiYear">5</span></label>
+      <input type="number" id="refiYear" value="5" step="1" min="1" max="30" />
+    </div>
+    <div class="field">
+      <label>New interest rate (%) <span class="value" id="lbl_refiRate">5.50%</span></label>
+      <input type="number" id="refiRate" value="5.5" step="0.05" min="0" />
+    </div>
+    <div class="field">
+      <label>New term (years) <span class="value" id="lbl_refiTerm">30</span></label>
+      <select id="refiTerm">
+        <option>10</option><option>15</option><option>20</option>
+        <option selected>30</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Refi closing costs (% of new loan) <span class="value" id="lbl_refiClose">2.00%</span></label>
+      <input type="number" id="refiClose" value="2.0" step="0.25" min="0" />
+    </div>
+    <div class="field">
+      <label>Cash-out amount ($) <span class="value" id="lbl_cashout">$0</span></label>
+      <input type="number" id="cashout" value="0" step="1000" min="0" />
+    </div>
+    <div class="field">
+      <label>Roll closing costs into loan</label>
+      <div class="toggle-row">
+        <button data-mode="no" class="active" id="tg_rollNo">No (pay cash)</button>
+        <button data-mode="yes" id="tg_rollYes">Yes (add to balance)</button>
+      </div>
+    </div>
+
+    <h3>Affordability</h3>
+    <div class="field">
+      <label>Other monthly debts ($) <span class="value" id="lbl_debts">$0</span></label>
+      <input type="number" id="debts" value="0" step="50" min="0" />
+      <div class="help">Car loans, student loans, credit card minimums, etc. Used for back-end DTI.</div>
+    </div>
+    <div class="field">
+      <label>Custom front-end DTI (%) <span class="value" id="lbl_dtiCustom">28%</span></label>
+      <input type="number" id="dtiCustom" value="28" step="1" min="1" max="60" />
+      <div class="help">Your own ceiling — % of gross income spent on housing.</div>
+    </div>
+
+    <h3>Advanced tabs</h3>
+    <div class="help" style="margin-bottom: 8px;">Toggle additional analysis views:</div>
+    <div class="field" style="margin-bottom: 6px;">
+      <label class="toggle-label"><input type="checkbox" id="toggle_taxes"> Tax Benefits</label>
+    </div>
+    <div class="field" style="margin-bottom: 6px;">
+      <label class="toggle-label"><input type="checkbox" id="toggle_retirement"> Retirement Tradeoff</label>
+    </div>
+    <div class="field" style="margin-bottom: 6px;">
+      <label class="toggle-label"><input type="checkbox" id="toggle_extra"> Extra Payment</label>
+    </div>
+    <div class="field" style="margin-bottom: 6px;">
+      <label class="toggle-label"><input type="checkbox" id="toggle_refi"> Refinance</label>
+    </div>
+    <div class="field" style="margin-bottom: 6px;">
+      <label class="toggle-label"><input type="checkbox" id="toggle_roi"> ROI Analysis</label>
+    </div>
+    <div class="field" style="margin-bottom: 6px;">
+      <label class="toggle-label"><input type="checkbox" id="toggle_compare"> Compare Scenarios</label>
+    </div>
+
+    <h3>Save scenario</h3>
+    <div class="field">
+      <label>Scenario name</label>
+      <input type="text" id="scenName" placeholder="e.g. 30yr @ 6.5%" />
+    </div>
+    <button class="btn" id="saveScen">Save current scenario</button>
+  </aside>
+
+  <!-- RESULTS -->
+  <section>
+    <div class="panel" style="margin-bottom: 16px;">
+      <h2>Monthly payment <span class="badge" id="badge_pmi">PMI off</span> <span class="badge" id="badge_extra">No extra</span></h2>
+      <div class="results-grid">
+        <div class="metric accent">
+          <div class="label">Total monthly</div>
+          <div class="number" id="m_total">$0</div>
+        </div>
+        <div class="metric info">
+          <div class="label">Principal & Interest</div>
+          <div class="number" id="m_pi">$0</div>
+        </div>
+        <div class="metric">
+          <div class="label">Taxes + Insurance</div>
+          <div class="number" id="m_ti">$0</div>
+        </div>
+        <div class="metric warn">
+          <div class="label">PMI + HOA</div>
+          <div class="number" id="m_pmihoa">$0</div>
+        </div>
+      </div>
+      <div>
+        <div class="payment-bar"><span class="label"><span class="swatch" style="background:#60a5fa"></span>Principal & Interest</span><span id="b_pi">$0</span></div>
+        <div class="payment-bar"><span class="label"><span class="swatch" style="background:#34d399"></span>Property Tax</span><span id="b_tax">$0</span></div>
+        <div class="payment-bar"><span class="label"><span class="swatch" style="background:#fbbf24"></span>Insurance</span><span id="b_ins">$0</span></div>
+        <div class="payment-bar"><span class="label"><span class="swatch" style="background:#f87171"></span>PMI</span><span id="b_pmi">$0</span></div>
+        <div class="payment-bar"><span class="label"><span class="swatch" style="background:#a78bfa"></span>HOA</span><span id="b_hoa">$0</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="tabs">
+        <button class="active" data-tab="overview">Overview</button>
+        <button data-tab="affordability">Affordability</button>
+        <button data-tab="cashclose">Cash to Close</button>
+        <button data-tab="savings">Buy Today</button>
+        <button data-tab="taxes" class="hidden-tab">Tax Benefits</button>
+        <button data-tab="retirement" class="hidden-tab">Retirement Tradeoff</button>
+        <button data-tab="appreciation">Appreciation & Equity</button>
+        <button data-tab="amortization">Amortization</button>
+        <button data-tab="rentbuy">Rent vs. Buy</button>
+        <button data-tab="extra" class="hidden-tab">Extra Payment</button>
+        <button data-tab="refi" class="hidden-tab">Refinance</button>
+        <button data-tab="roi" class="hidden-tab">ROI Analysis</button>
+        <button data-tab="compare" class="hidden-tab">Compare Scenarios</button>
+      </div>
+
+      <!-- OVERVIEW -->
+      <div class="tab-pane active" id="tab_overview">
+        <div class="results-grid">
+          <div class="metric"><div class="label">Loan amount</div><div class="number" id="o_loan">$0</div></div>
+          <div class="metric"><div class="label">Total interest paid</div><div class="number" id="o_interest">$0</div></div>
+          <div class="metric"><div class="label">Payoff month</div><div class="number" id="o_payoff">—</div></div>
+          <div class="metric accent"><div class="label">Total cost of ownership (30yr)</div><div class="number" id="o_toc">$0</div></div>
+          <div class="metric info"><div class="label">Min income (28/36 rule)</div><div class="number" id="o_income">$0</div></div>
+          <div class="metric warn"><div class="label">Min income (Ramsey 25%)</div><div class="number" id="o_income_cons">$0</div></div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-wrap"><canvas id="chart_payment"></canvas></div>
+          <div class="chart-wrap"><canvas id="chart_balance"></canvas></div>
+        </div>
+      </div>
+
+      <!-- AFFORDABILITY -->
+      <div class="tab-pane" id="tab_affordability">
+        <p class="help" style="margin-bottom: 16px;">
+          Required gross annual <strong>household</strong> income to comfortably afford this payment under various DTI standards.
+          PITI = Principal + Interest + Tax + Insurance. Front-end DTI = PITI / income.
+          Back-end DTI = (PITI + other monthly debts) / income.
+        </p>
+        <div class="results-grid">
+          <div class="metric info">
+            <div class="label">PITI (used in DTI)</div>
+            <div class="number" id="af_piti">$0</div>
+          </div>
+          <div class="metric">
+            <div class="label">Total monthly housing</div>
+            <div class="number" id="af_housing">$0</div>
+          </div>
+          <div class="metric warn">
+            <div class="label">Other monthly debts</div>
+            <div class="number" id="af_debts">$0</div>
+          </div>
+          <div class="metric">
+            <div class="label">Total monthly obligations</div>
+            <div class="number" id="af_total">$0</div>
+          </div>
+        </div>
+        <table style="margin-top: 8px;">
+          <thead>
+            <tr>
+              <th>Standard</th>
+              <th>Front-end DTI</th>
+              <th>Back-end DTI</th>
+              <th>Required gross/year</th>
+              <th>Required gross/month</th>
+              <th>Comment</th>
+            </tr>
+          </thead>
+          <tbody id="aff_table"></tbody>
+        </table>
+        <details>
+          <summary>How required income is calculated</summary>
+          <p class="help" style="margin-top: 8px;">
+            For each standard, we take the binding constraint:
+            <code>required_income = max(PITI / front_end_dti, (PITI + other_debts) / back_end_dti)</code>.
+            That's because lenders apply both ratios and you have to clear both.
+            "Standard" 28/36 is the conventional underwriting baseline. FHA allows up to 31/43.
+            Ramsey-style 25% is the most conservative — leaves room for everything else.
+          </p>
+        </details>
+      </div>
+
+      <!-- CASH TO CLOSE -->
+      <div class="tab-pane" id="tab_cashclose">
+        <h3 style="margin: 0 0 8px; color: var(--accent-2);">Step 1 — Cash needed at closing</h3>
+        <div class="results-grid">
+          <div class="metric info"><div class="label">Down payment</div><div class="number" id="cc_dp">$0</div></div>
+          <div class="metric"><div class="label">Closing costs</div><div class="number" id="cc_closing">$0</div></div>
+          <div class="metric warn"><div class="label">Move-in / repairs</div><div class="number" id="cc_movein">$0</div></div>
+          <div class="metric"><div class="label">Lender reserves <span style="font-size:10px;color:var(--muted);">(stays in account)</span></div><div class="number" id="cc_reserves">$0</div></div>
+          <div class="metric accent" style="grid-column: span 2;"><div class="label">Total cash needed at close</div><div class="number" id="cc_total">$0</div></div>
+          <div class="metric info" style="grid-column: span 2;"><div class="label">Current liquid remaining after close</div><div class="number" id="cc_remaining">$0</div></div>
+        </div>
+
+        <h3 style="margin: 24px 0 8px; color: var(--accent-2);">Step 2 — Recommended liquid retention</h3>
+        <p class="help" style="margin-bottom: 12px;">
+          You should keep at least this much liquid <em>after</em> closing. The emergency fund covers your full monthly cost of living (housing + everything else) for the chosen number of months.
+        </p>
+        <div class="results-grid">
+          <div class="metric"><div class="label">Monthly cost of living</div><div class="number" id="cc_outflows">$0</div></div>
+          <div class="metric"><div class="label">Emergency fund target</div><div class="number" id="cc_emerg">$0</div></div>
+          <div class="metric"><div class="label">Lender reserves (subset)</div><div class="number" id="cc_reserves2">$0</div></div>
+          <div class="metric accent"><div class="label">Total liquid to retain</div><div class="number" id="cc_retain">$0</div></div>
+        </div>
+
+      </div>
+
+      <!-- BUY TODAY -->
+      <div class="tab-pane" id="tab_savings">
+        <p class="help" style="margin-bottom: 16px;">
+          What your position looks like if you buy today with current assets.
+        </p>
+
+        <h3 style="margin: 0 0 8px; color: var(--accent-2);">Liquidity check</h3>
+        <div class="results-grid">
+          <div class="metric"><div class="label">Current liquid assets</div><div class="number" id="sv_liquid">$0</div></div>
+          <div class="metric warn"><div class="label">% used for closing</div><div class="number" id="sv_pct">0%</div></div>
+          <div class="metric"><div class="label">Liquid remaining after close</div><div class="number" id="sv_after">$0</div></div>
+          <div class="metric"><div class="label">Emergency fund target</div><div class="number" id="sv_emerg">$0</div></div>
+        </div>
+
+        <h3 style="color: var(--accent-2); margin-top: 24px;">Concentration cap</h3>
+        <p class="help" style="margin-bottom: 12px;">
+          Given your planned down payment and your <span id="sv_pct_label">50</span>% concentration cap, this is how much total liquid you'd need at purchase. If you're below, you either save more, lower the down payment, or raise the cap.
+        </p>
+        <div class="results-grid">
+          <div class="metric info"><div class="label">Planned down payment</div><div class="number" id="sv_planned_dp">$0</div></div>
+          <div class="metric"><div class="label">Liquid required at purchase</div><div class="number" id="sv_required_liquid">$0</div></div>
+          <div class="metric"><div class="label">Current liquid</div><div class="number" id="sv_current_liquid">$0</div></div>
+          <div class="metric"><div class="label">Surplus / shortfall <span id="sv_gap_status" style="font-size: 10px; color: var(--muted);"></span></div><div class="number" id="sv_liquid_gap">$0</div></div>
+          <div class="metric warn"><div class="label">Time to reach goal</div><div class="number" id="sv_time_to_goal">—</div></div>
+        </div>
+
+        <div id="sv_recommendation" style="margin-top: 16px; padding: 16px; border-radius: 8px; border: 1px solid var(--border);"></div>
+
+        <details>
+          <summary>How the recommendation is calculated</summary>
+          <p class="help" style="margin-top: 8px;">
+            Safe down payment = current liquid − closing costs − initial repairs − emergency fund (months × monthly expenses).
+            If safe down payment ≥ planned down payment, you're in good shape.
+            If safe down payment is lower, the recommended max down payment is what's left after preserving the emergency fund.
+            We never recommend depleting below the emergency fund target.
+          </p>
+        </details>
+
+      </div>
+
+      <!-- TAX BENEFITS -->
+      <div class="tab-pane" id="tab_taxes">
+        <p class="help" style="margin-bottom: 16px;">
+          Tax savings from itemizing (mortgage interest + SALT) compared to the standard deduction, plus capital gains exclusion at sale.
+        </p>
+        <div class="results-grid">
+          <div class="metric info"><div class="label">Year 1 itemized total</div><div class="number" id="tx_itemized">$0</div></div>
+          <div class="metric"><div class="label">Standard deduction</div><div class="number" id="tx_standard">$0</div></div>
+          <div class="metric accent"><div class="label">Year 1 federal tax savings</div><div class="number" id="tx_save1">$0</div></div>
+          <div class="metric"><div class="label">Lifetime tax savings (30yr)</div><div class="number" id="tx_saveLife">$0</div></div>
+        </div>
+        <table style="margin-top: 16px;">
+          <thead><tr>
+            <th>Item</th>
+            <th>Year 1</th>
+            <th>Year 30</th>
+            <th>Notes</th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td>Mortgage interest paid</td>
+              <td id="tx_int1">$0</td>
+              <td id="tx_int30">$0</td>
+              <td class="muted">Deductible interest capped at first $750K of loan (post-TCJA)</td>
+            </tr>
+            <tr>
+              <td>Property tax paid</td>
+              <td id="tx_pt1">$0</td>
+              <td id="tx_pt30">$0</td>
+              <td class="muted">Counts toward $10K SALT cap (combined with other state/local taxes)</td>
+            </tr>
+            <tr>
+              <td>SALT deductible (capped)</td>
+              <td id="tx_salt1">$0</td>
+              <td id="tx_salt30">$0</td>
+              <td class="muted">Min($10K, property tax + other SALT)</td>
+            </tr>
+            <tr>
+              <td>Itemized total</td>
+              <td id="tx_it1">$0</td>
+              <td id="tx_it30">$0</td>
+              <td class="muted">Interest + SALT (capped)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 style="color: var(--accent-2); margin-top: 24px;">Capital gains at sale</h3>
+        <div class="results-grid">
+          <div class="metric"><div class="label">Exclusion amount</div><div class="number" id="cg_excl">$0</div></div>
+          <div class="metric info"><div class="label">Gross gain at year 30</div><div class="number" id="cg_gain">$0</div></div>
+          <div class="metric warn"><div class="label">Taxable gain</div><div class="number" id="cg_tax_gain">$0</div></div>
+          <div class="metric accent"><div class="label">After-tax net equity (yr 30)</div><div class="number" id="cg_after_tax">$0</div></div>
+        </div>
+        <p class="help" style="margin-top: 8px;">
+          Cost basis = purchase price + closing costs. Gain = sale value − selling costs − basis.
+          Exclusion: $250K single / $500K married filing jointly (Section 121).
+        </p>
+      </div>
+
+      <!-- RETIREMENT TRADEOFF -->
+      <div class="tab-pane" id="tab_retirement">
+        <p class="help" style="margin-bottom: 16px;">
+          How your housing costs affect retirement savings. A higher mortgage payment may reduce what you can contribute to retirement accounts.
+        </p>
+
+        <h3 style="margin: 0 0 8px; color: var(--accent-2);">Current retirement position</h3>
+        <div class="results-grid">
+          <div class="metric"><div class="label">Gross monthly income</div><div class="number" id="rt_income">$0</div></div>
+          <div class="metric"><div class="label">Current 401k contribution</div><div class="number" id="rt_current_contrib">$0/mo</div></div>
+          <div class="metric"><div class="label">Employer match received</div><div class="number" id="rt_emp_match">$0/mo</div></div>
+          <div class="metric info"><div class="label">Total going to retirement</div><div class="number" id="rt_total_retire">$0/mo</div></div>
+        </div>
+
+        <h3 style="margin: 24px 0 8px; color: var(--accent-2);">Housing cost impact</h3>
+        <div class="results-grid">
+          <div class="metric"><div class="label">Monthly housing (PITI)</div><div class="number" id="rt_housing">$0</div></div>
+          <div class="metric"><div class="label">Housing as % of gross</div><div class="number" id="rt_housing_pct">0%</div></div>
+          <div class="metric"><div class="label">Retirement as % of gross</div><div class="number" id="rt_retire_pct">0%</div></div>
+          <div class="metric warn"><div class="label">Combined (housing + retirement)</div><div class="number" id="rt_combined_pct">0%</div></div>
+        </div>
+
+        <h3 style="margin: 24px 0 8px; color: var(--accent-2);">Retirement contribution capacity</h3>
+        <p class="help" style="margin-bottom: 12px;">
+          After paying for housing and other expenses, how much could you contribute to retirement?
+        </p>
+        <div class="results-grid">
+          <div class="metric"><div class="label">Net monthly after taxes (est)</div><div class="number" id="rt_net_income">$0</div></div>
+          <div class="metric"><div class="label">After housing + expenses</div><div class="number" id="rt_after_expenses">$0</div></div>
+          <div class="metric"><div class="label">2024 401k limit</div><div class="number" id="rt_401k_limit">$23,000/yr</div></div>
+          <div class="metric info"><div class="label">Max feasible 401k contribution</div><div class="number" id="rt_max_401k">$0/mo</div></div>
+        </div>
+
+        <h3 style="margin: 24px 0 8px; color: var(--accent-2);">Opportunity cost of housing</h3>
+        <p class="help" style="margin-bottom: 12px;">
+          What if you rented for less and invested the difference in retirement accounts?
+        </p>
+        <div class="results-grid">
+          <div class="metric"><div class="label">Current rent (from inputs)</div><div class="number" id="rt_rent">$0</div></div>
+          <div class="metric"><div class="label">Monthly difference (own − rent)</div><div class="number" id="rt_diff">$0</div></div>
+          <div class="metric warn"><div class="label">If invested monthly for <span id="rt_years_label">25</span> yr</div><div class="number" id="rt_fv_diff">$0</div></div>
+          <div class="metric accent"><div class="label">At retirement, home equity vs. invested diff</div><div class="number" id="rt_net_compare">$0</div></div>
+        </div>
+
+        <h3 style="margin: 24px 0 8px; color: var(--accent-2);">Retirement balance projection</h3>
+        <div class="results-grid">
+          <div class="metric"><div class="label">Current contribution trajectory</div><div class="number" id="rt_proj_current">$0</div></div>
+          <div class="metric"><div class="label">If you maxed 401k instead</div><div class="number" id="rt_proj_max">$0</div></div>
+          <div class="metric warn"><div class="label">Retirement shortfall from housing</div><div class="number" id="rt_shortfall">$0</div></div>
+        </div>
+
+        <div id="rt_recommendation" style="margin-top: 16px; padding: 16px; border-radius: 8px; border: 1px solid var(--border);"></div>
+
+        <details style="margin-top: 16px;">
+          <summary>How this analysis works</summary>
+          <div class="help" style="margin-top: 8px;">
+            <strong>Housing as % of gross:</strong> Financial advisors recommend keeping housing below 28% of gross income (front-end DTI). Above 35% leaves little room for retirement savings.
+            <br><br>
+            <strong>Retirement contribution:</strong> Most advisors recommend saving 15-20% of gross income for retirement (including employer match). If housing consumes too much, you may fall short.
+            <br><br>
+            <strong>Opportunity cost:</strong> The difference between owning and renting, invested over time, shows what you give up in liquid retirement assets. However, home equity is also wealth — just illiquid.
+            <br><br>
+            <strong>Key tradeoff:</strong> A paid-off home reduces retirement income needs, but over-housing today can mean under-saving for retirement. Balance is key.
+          </div>
+        </details>
+      </div>
+
+      <!-- APPRECIATION -->
+      <div class="tab-pane" id="tab_appreciation">
+        <div class="results-grid">
+          <div class="metric info"><div class="label">Home value at year 10</div><div class="number" id="a_v10">$0</div></div>
+          <div class="metric accent"><div class="label">Net equity at year 10</div><div class="number" id="a_e10">$0</div></div>
+          <div class="metric info"><div class="label">Home value at year 30</div><div class="number" id="a_v30">$0</div></div>
+          <div class="metric accent"><div class="label">Net equity at year 30</div><div class="number" id="a_e30">$0</div></div>
+        </div>
+        <div class="help" style="margin-bottom: 12px;">
+          Net equity = appreciated home value − remaining loan balance − selling costs.
+          This is what you'd walk away with if you sold at that point.
+        </div>
+        <div class="chart-wrap" style="height: 360px;"><canvas id="chart_appreciation"></canvas></div>
+        <div class="scrolling-table">
+          <table id="appreciation_table">
+            <thead><tr>
+              <th>Year</th><th>Home Value</th><th>Loan Balance</th><th>Gross Equity</th>
+              <th>Selling Costs</th><th>Net Equity</th><th>Cum. Interest</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AMORTIZATION -->
+      <div class="tab-pane" id="tab_amortization">
+        <p class="help">First 12 months and then year-end snapshots. Extra payments are reflected here.</p>
+        <div class="scrolling-table">
+          <table id="amort_table">
+            <thead><tr>
+              <th>Month</th><th>Payment</th><th>Principal</th><th>Interest</th><th>Extra</th><th>Balance</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RENT VS BUY -->
+      <div class="tab-pane" id="tab_rentbuy">
+        <div class="results-grid">
+          <div class="metric accent"><div class="label">Breakeven year (buying wins)</div><div class="number" id="rb_break">—</div></div>
+          <div class="metric info"><div class="label">Buy net position @ yr 10</div><div class="number" id="rb_buy10">$0</div></div>
+          <div class="metric warn"><div class="label">Rent net position @ yr 10</div><div class="number" id="rb_rent10">$0</div></div>
+          <div class="metric"><div class="label">Diff @ yr 30</div><div class="number" id="rb_diff30">$0</div></div>
+        </div>
+        <div class="help" style="margin-bottom: 12px;">
+          <strong>Buy:</strong> Net equity (after selling costs) − cumulative ownership costs (P&I, tax, insurance, PMI, HOA, maintenance, closing).
+          <strong>Rent:</strong> Down payment + closing costs invested at the investment return rate, minus cumulative rent paid.
+          Difference (Buy − Rent) shows when buying pulls ahead.
+        </div>
+        <div class="chart-wrap" style="height: 360px;"><canvas id="chart_rentbuy"></canvas></div>
+      </div>
+
+      <!-- EXTRA PAYMENT -->
+      <div class="tab-pane" id="tab_extra">
+        <div class="results-grid">
+          <div class="metric accent"><div class="label">Interest saved</div><div class="number" id="ex_saved">$0</div></div>
+          <div class="metric info"><div class="label">Payoff accelerated by</div><div class="number" id="ex_faster">—</div></div>
+          <div class="metric"><div class="label">New payoff date</div><div class="number" id="ex_new">—</div></div>
+          <div class="metric warn"><div class="label">Total extra paid</div><div class="number" id="ex_paid">$0</div></div>
+        </div>
+        <div class="help" style="margin-bottom:12px;">Toggle the <em>Extra monthly principal</em> input on the left to model different prepayment amounts.</div>
+        <div class="chart-wrap" style="height: 360px;"><canvas id="chart_extra"></canvas></div>
+      </div>
+
+      <!-- REFINANCE -->
+      <div class="tab-pane" id="tab_refi">
+        <p class="help" style="margin-bottom: 16px;">
+          Compares <strong>refinancing</strong> at the chosen year against <strong>keeping your current loan</strong>.
+          Break-even point = closing costs ÷ monthly savings — beyond that, the refi pays off.
+        </p>
+        <div class="results-grid">
+          <div class="metric info"><div class="label">Balance at refi point</div><div class="number" id="rf_bal">$0</div></div>
+          <div class="metric"><div class="label">New loan amount</div><div class="number" id="rf_newloan">$0</div></div>
+          <div class="metric"><div class="label">Refi closing costs</div><div class="number" id="rf_close">$0</div></div>
+          <div class="metric warn"><div class="label">Cash received (cash-out)</div><div class="number" id="rf_cash">$0</div></div>
+        </div>
+        <table style="margin-top: 16px;">
+          <thead><tr>
+            <th>Metric</th>
+            <th>Keep current loan</th>
+            <th>Refinance</th>
+            <th>Delta</th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td>Monthly P&I (after refi point)</td>
+              <td id="rf_oldPI">$0</td>
+              <td id="rf_newPI">$0</td>
+              <td id="rf_dPI">$0</td>
+            </tr>
+            <tr>
+              <td>Months remaining</td>
+              <td id="rf_oldMos">—</td>
+              <td id="rf_newMos">—</td>
+              <td id="rf_dMos">—</td>
+            </tr>
+            <tr>
+              <td>Total interest remaining</td>
+              <td id="rf_oldInt">$0</td>
+              <td id="rf_newInt">$0</td>
+              <td id="rf_dInt">$0</td>
+            </tr>
+            <tr>
+              <td>Total cost remaining (P+I)</td>
+              <td id="rf_oldCost">$0</td>
+              <td id="rf_newCost">$0</td>
+              <td id="rf_dCost">$0</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="results-grid" style="margin-top: 16px;">
+          <div class="metric accent"><div class="label">Monthly savings</div><div class="number" id="rf_savings">$0</div></div>
+          <div class="metric info"><div class="label">Break-even point</div><div class="number" id="rf_breakeven">—</div></div>
+          <div class="metric"><div class="label">Lifetime interest saved</div><div class="number" id="rf_intSaved">$0</div></div>
+          <div class="metric warn"><div class="label">Net lifetime cost change</div><div class="number" id="rf_netCost">$0</div></div>
+        </div>
+        <div id="rf_verdict" style="margin-top: 16px;"></div>
+        <details>
+          <summary>Math &amp; caveats</summary>
+          <p class="help" style="margin-top: 8px;">
+            <strong>Break-even (months) = closing costs ÷ monthly P&I savings.</strong>
+            If you'll be in the home longer than break-even, refi pays off in cash terms.
+            Lifetime interest saved compares total interest paid on the rest of the original loan vs. the new loan over its full term.
+            <br><br>
+            Notes: We compare P&I only (taxes, insurance, HOA, PMI are unchanged by refi).
+            If you extend the term (e.g. refi a 25-yr-remaining loan into a fresh 30-yr), monthly payment drops but lifetime interest may rise.
+            Cash-out increases the new loan size and shows up as "Cash received" — useful for home improvements but increases total interest.
+            Rolling closing costs into the loan adds them to the new balance instead of paying upfront.
+          </p>
+        </details>
+      </div>
+
+      <!-- ROI ANALYSIS -->
+      <div class="tab-pane" id="tab_roi">
+        <p class="help" style="margin-bottom: 16px;">
+          Three ways to measure your return on investment if you sell the home at different points in time.
+        </p>
+
+        <div class="scrolling-table">
+          <table id="roi_table">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Year 5</th>
+                <th>Year 10</th>
+                <th>Year 15</th>
+                <th>Year 20</th>
+                <th>Year 30</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="6" style="text-align:left; font-weight:600; background:var(--bg-muted);">Cash Flows</td>
+              </tr>
+              <tr>
+                <td>Initial cash outlay (DP + closing)</td>
+                <td id="roi_initial_5">$0</td>
+                <td id="roi_initial_10">$0</td>
+                <td id="roi_initial_15">$0</td>
+                <td id="roi_initial_20">$0</td>
+                <td id="roi_initial_30">$0</td>
+              </tr>
+              <tr>
+                <td>Cumulative payments (P&I + Tax + Ins + PMI + HOA)</td>
+                <td id="roi_payments_5">$0</td>
+                <td id="roi_payments_10">$0</td>
+                <td id="roi_payments_15">$0</td>
+                <td id="roi_payments_20">$0</td>
+                <td id="roi_payments_30">$0</td>
+              </tr>
+              <tr>
+                <td>Cumulative maintenance</td>
+                <td id="roi_maint_5">$0</td>
+                <td id="roi_maint_10">$0</td>
+                <td id="roi_maint_15">$0</td>
+                <td id="roi_maint_20">$0</td>
+                <td id="roi_maint_30">$0</td>
+              </tr>
+              <tr style="font-weight:600;">
+                <td>Total cash invested</td>
+                <td id="roi_totalcash_5">$0</td>
+                <td id="roi_totalcash_10">$0</td>
+                <td id="roi_totalcash_15">$0</td>
+                <td id="roi_totalcash_20">$0</td>
+                <td id="roi_totalcash_30">$0</td>
+              </tr>
+              <tr style="font-weight:600; background:var(--bg-muted);">
+                <td>Net equity at sale (after selling costs)</td>
+                <td id="roi_equity_5">$0</td>
+                <td id="roi_equity_10">$0</td>
+                <td id="roi_equity_15">$0</td>
+                <td id="roi_equity_20">$0</td>
+                <td id="roi_equity_30">$0</td>
+              </tr>
+              <tr>
+                <td colspan="6" style="text-align:left; font-weight:600; background:var(--bg-muted);">Return Metrics</td>
+              </tr>
+              <tr>
+                <td>1. Simple ROI</td>
+                <td id="roi_simple_5">0%</td>
+                <td id="roi_simple_10">0%</td>
+                <td id="roi_simple_15">0%</td>
+                <td id="roi_simple_20">0%</td>
+                <td id="roi_simple_30">0%</td>
+              </tr>
+              <tr>
+                <td>2. CAGR (on initial cash only)</td>
+                <td id="roi_cagr_5">0%</td>
+                <td id="roi_cagr_10">0%</td>
+                <td id="roi_cagr_15">0%</td>
+                <td id="roi_cagr_20">0%</td>
+                <td id="roi_cagr_30">0%</td>
+              </tr>
+              <tr style="font-weight:600;">
+                <td>3. IRR (all cash flows)</td>
+                <td id="roi_irr_5">0%</td>
+                <td id="roi_irr_10">0%</td>
+                <td id="roi_irr_15">0%</td>
+                <td id="roi_irr_20">0%</td>
+                <td id="roi_irr_30">0%</td>
+              </tr>
+              <tr>
+                <td colspan="6" style="text-align:left; font-weight:600; background:var(--bg-muted);">Comparison</td>
+              </tr>
+              <tr>
+                <td>If invested in market instead (at <span id="roi_inv_rate">7</span>% return)</td>
+                <td id="roi_market_5">$0</td>
+                <td id="roi_market_10">$0</td>
+                <td id="roi_market_15">$0</td>
+                <td id="roi_market_20">$0</td>
+                <td id="roi_market_30">$0</td>
+              </tr>
+              <tr style="font-weight:600;">
+                <td>Home equity vs. market investment</td>
+                <td id="roi_diff_5">$0</td>
+                <td id="roi_diff_10">$0</td>
+                <td id="roi_diff_15">$0</td>
+                <td id="roi_diff_20">$0</td>
+                <td id="roi_diff_30">$0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details style="margin-top: 16px;">
+          <summary>How these metrics work</summary>
+          <div class="help" style="margin-top: 8px;">
+            <strong>1. Simple ROI</strong> = (Net Equity − Total Cash Invested) / Total Cash Invested<br>
+            Shows total percentage gain/loss on all cash put into the home. Easy to understand but doesn't account for timing.
+            <br><br>
+            <strong>2. CAGR (Compound Annual Growth Rate)</strong> = (Net Equity / Initial Cash)^(1/years) − 1<br>
+            Annualized return on your initial outlay (down payment + closing). Useful for comparing to stock market returns, but ignores ongoing payments.
+            <br><br>
+            <strong>3. IRR (Internal Rate of Return)</strong><br>
+            The discount rate that makes the NPV of all cash flows equal zero. Accounts for the timing of every payment and the final sale proceeds.
+            This is the most accurate measure of your true annualized return, and what real estate investors use.
+            <br><br>
+            <strong>Market comparison:</strong> Shows what you'd have if you invested the same cash flows (initial + monthly) in the stock market at your expected return rate.
+          </div>
+        </details>
+      </div>
+
+      <!-- COMPARE -->
+      <div class="tab-pane" id="tab_compare">
+        <div class="scenario-list" id="scen_list"></div>
+        <div id="compare_container">
+          <p class="help">Save a scenario (left panel) to start comparing. Up to 5 scenarios.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<script>
+/* ========================================================================
+   STATE
+   ======================================================================== */
+const state = {
+  price: 500000,
+  downMode: 'pct',
+  downValue: 20,
+  rate: 6.5,
+  term: 30,
+  taxPct: 1.2,
+  ins: 1800,
+  hoa: 0,
+  pmiPct: 0.6,
+  appr: 3.5,
+  maint: 1.0,
+  closePct: 3.0,
+  sellPct: 6.0,
+  extra: 0,
+  rent: 2500,
+  rentInc: 3.0,
+  invRet: 7.0,
+  debts: 0,
+  dtiCustom: 28,
+  // Escalation
+  taxGrowth: 2.0,
+  insGrowth: 5.0,
+  // Cash to close
+  movein: 5000,
+  reserveMos: 2,
+  // Savings + assets
+  liquid: 150000,
+  savings: 2000,
+  expenses: 6000,
+  emerg: 6,
+  maxLiqPct: 50,
+  // Taxes
+  filing: 'married',
+  marg: 24,
+  salt: 8000,
+  ltcg: 15,
+  // Retirement
+  income: 150000,
+  retire401k: 10,
+  empMatch: 50,
+  matchCap: 6,
+  retireReturn: 7,
+  retireYears: 25,
+  // Refinance
+  refiEnabled: false,
+  refiYear: 5,
+  refiRate: 5.5,
+  refiTerm: 30,
+  refiClose: 2.0,
+  cashout: 0,
+  rollClosing: 'no',
+};
+const scenarios = [];
+
+/* ========================================================================
+   FORMAT HELPERS
+   ======================================================================== */
+const fmt$ = n => '$' + Math.round(n).toLocaleString();
+const fmt$d = n => '$' + n.toLocaleString(undefined, {maximumFractionDigits:0});
+const fmtPct = n => n.toFixed(2) + '%';
+
+/* ========================================================================
+   MORTGAGE MATH
+   ======================================================================== */
+function monthlyPI(loan, annualRate, termYears) {
+  if (loan <= 0) return 0;
+  const r = annualRate / 100 / 12;
+  const n = termYears * 12;
+  if (r === 0) return loan / n;
+  return loan * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+}
+
+// IRR calculation using Newton-Raphson method
+// cashFlows: array of cash flows (negative = outflow, positive = inflow)
+// Returns annual IRR as a decimal (e.g., 0.07 for 7%)
+function calculateIRR(cashFlows, guess = 0.1, maxIterations = 100, tolerance = 1e-7) {
+  // Convert annual guess to monthly
+  let rate = Math.pow(1 + guess, 1/12) - 1;
+
+  for (let i = 0; i < maxIterations; i++) {
+    let npv = 0;
+    let dnpv = 0; // derivative of NPV
+
+    for (let t = 0; t < cashFlows.length; t++) {
+      const pv = cashFlows[t] / Math.pow(1 + rate, t);
+      npv += pv;
+      if (t > 0) {
+        dnpv -= t * cashFlows[t] / Math.pow(1 + rate, t + 1);
+      }
+    }
+
+    if (Math.abs(npv) < tolerance) {
+      // Convert monthly rate back to annual
+      return Math.pow(1 + rate, 12) - 1;
+    }
+
+    if (Math.abs(dnpv) < 1e-10) {
+      // Derivative too small, try different approach
+      rate += 0.001;
+      continue;
+    }
+
+    const newRate = rate - npv / dnpv;
+
+    // Bound the rate to reasonable values
+    if (newRate < -0.99) rate = -0.5;
+    else if (newRate > 10) rate = 1;
+    else rate = newRate;
+  }
+
+  // Return NaN if no convergence
+  return NaN;
+}
+
+function downPaymentAmount(s) {
+  if (s.downMode === 'pct') return s.price * (s.downValue / 100);
+  return s.downValue;
+}
+
+function buildSchedule(s) {
+  const dp = downPaymentAmount(s);
+  const loan = Math.max(0, s.price - dp);
+  const r = s.rate / 100 / 12;
+  const n = s.term * 12;
+  const pi = monthlyPI(loan, s.rate, s.term);
+  const pmiMonthly = (s.pmiPct / 100) * loan / 12;
+  const pmiCutoffEquity = s.price * 0.20; // original price 80% LTV
+  const taxMonthly = (s.taxPct / 100) * s.price / 12;
+  const insMonthly = s.ins / 12;
+  const hoaMonthly = s.hoa;
+
+  const sched = [];
+  let bal = loan;
+  let cumInterest = 0;
+  let cumPrincipal = 0;
+  let totalExtra = 0;
+  let payoffMonth = null;
+
+  for (let m = 1; m <= n; m++) {
+    if (bal <= 0.01) break;
+    const interest = bal * r;
+    let principal = pi - interest;
+    let extraThis = s.extra;
+    if (principal + extraThis > bal) {
+      // last payment
+      principal = bal;
+      extraThis = 0;
+    }
+    bal -= principal;
+    if (extraThis > 0 && bal > 0) {
+      const apply = Math.min(extraThis, bal);
+      bal -= apply;
+      totalExtra += apply;
+    } else {
+      extraThis = 0;
+    }
+    cumInterest += interest;
+    cumPrincipal += principal;
+    const equity = s.price - bal; // original equity from principal paid down + dp
+    const pmiActive = (dp + cumPrincipal) < pmiCutoffEquity;
+    const pmiPay = pmiActive ? pmiMonthly : 0;
+    sched.push({
+      month: m,
+      payment: pi + extraThis,
+      principal,
+      interest,
+      extra: extraThis,
+      balance: bal,
+      pmi: pmiPay,
+      tax: taxMonthly,
+      ins: insMonthly,
+      hoa: hoaMonthly,
+      cumInterest,
+      cumPrincipal,
+    });
+    if (bal <= 0.01 && payoffMonth === null) payoffMonth = m;
+  }
+  return {
+    loan, dp, pi, pmiMonthly, taxMonthly, insMonthly, hoaMonthly,
+    sched, payoffMonth: payoffMonth || sched.length, totalInterest: cumInterest, totalExtra
+  };
+}
+
+function buildAppreciation(s, sched) {
+  // year-by-year snapshot up to loan term (use 30 even after payoff for asset projection)
+  const years = Math.max(s.term, 30);
+  const rows = [];
+  for (let y = 1; y <= years; y++) {
+    const monthIdx = Math.min(y * 12, sched.sched.length) - 1;
+    const last = sched.sched[monthIdx] || sched.sched[sched.sched.length - 1];
+    const balance = last ? last.balance : 0;
+    const homeValue = s.price * Math.pow(1 + s.appr / 100, y);
+    const gross = homeValue - balance;
+    const sellingCosts = homeValue * s.sellPct / 100;
+    const net = gross - sellingCosts;
+    rows.push({
+      year: y, homeValue, balance, gross, sellingCosts, net,
+      cumInterest: last ? last.cumInterest : sched.totalInterest,
+    });
+  }
+  return rows;
+}
+
+function buildRentVsBuy(s, sched, apprRows) {
+  // Buy net = appreciation net equity - cumulative buy outflows (P&I + tax + ins + pmi + hoa + maintenance) - closing costs
+  // Rent net = (down + closing) invested @ invRet - cumulative rent
+  // Both starting from t=0.
+  const dp = downPaymentAmount(s);
+  const closing = s.price * s.closePct / 100;
+  const initialInvestable = dp + closing;
+  const rentMonthlyStart = s.rent;
+
+  const rows = [];
+  let cumBuyCost = closing + dp; // down payment is "spent" upfront for the buy side (recovered via equity)
+  let cumRentPaid = 0;
+  let investAccount = initialInvestable;
+  const monthlyInvRet = Math.pow(1 + s.invRet/100, 1/12) - 1;
+  const monthlyRentInc = Math.pow(1 + s.rentInc/100, 1/12) - 1;
+
+  // We'll compute month by month for accuracy; emit yearly snapshots.
+  let currentRent = rentMonthlyStart;
+  const years = 30;
+  for (let m = 1; m <= years * 12; m++) {
+    const monthData = sched.sched[m-1];
+    const yearIdx = Math.ceil(m / 12);
+    // Escalated tax + insurance for this year
+    const taxEscMonthly = (s.taxPct/100) * s.price / 12 * Math.pow(1 + s.taxGrowth/100, yearIdx - 1);
+    const insEscMonthly = s.ins / 12 * Math.pow(1 + s.insGrowth/100, yearIdx - 1);
+    let buyMonthlyOut = 0;
+    if (monthData) {
+      buyMonthlyOut += monthData.payment;
+      buyMonthlyOut += taxEscMonthly + insEscMonthly + monthData.pmi + monthData.hoa;
+    } else {
+      // Loan is paid off; still pay tax, ins, hoa, maintenance
+      buyMonthlyOut += taxEscMonthly + insEscMonthly + s.hoa;
+    }
+    // Maintenance on current home value
+    const homeValueNow = s.price * Math.pow(1 + s.appr/100, m/12);
+    buyMonthlyOut += (s.maint / 100) * homeValueNow / 12;
+    cumBuyCost += buyMonthlyOut;
+
+    // Rent side
+    cumRentPaid += currentRent;
+    currentRent *= (1 + monthlyRentInc);
+
+    // Invest the buy-rent differential into the same investment account? Standard approach:
+    // Most rigorous: assume renter invests the DIFFERENCE between buy outflow and rent.
+    // But to keep model interpretable, we keep renter's invest account as just the upfront capital growing.
+    investAccount *= (1 + monthlyInvRet);
+
+    if (m % 12 === 0) {
+      const apprRow = apprRows[yearIdx - 1];
+      const buyNet = apprRow.net - cumBuyCost + dp; // add back dp because dp is recovered through equity
+      const rentNet = investAccount - cumRentPaid;
+      rows.push({
+        year: yearIdx,
+        buyNet, rentNet,
+        diff: buyNet - rentNet,
+        cumBuyCost, cumRentPaid, investAccount, equity: apprRow.net,
+      });
+    }
+  }
+  return rows;
+}
+
+function findBreakeven(rentBuyRows) {
+  for (const r of rentBuyRows) {
+    if (r.diff >= 0) return r.year;
+  }
+  return null;
+}
+
+/* ========================================================================
+   RENDER
+   ======================================================================== */
+let charts = {};
+
+function destroyCharts() {
+  Object.values(charts).forEach(c => c && c.destroy && c.destroy());
+  charts = {};
+}
+
+function compute() {
+  // Sync labels
+  document.getElementById('lbl_price').textContent = fmt$(state.price);
+  const dp = downPaymentAmount(state);
+  const pct = (dp / state.price) * 100;
+  document.getElementById('lbl_down_pct').textContent = pct.toFixed(1) + '%';
+  document.getElementById('lbl_down_amt').textContent = fmt$(dp);
+  document.getElementById('lbl_rate').textContent = state.rate.toFixed(2) + '%';
+  document.getElementById('lbl_term').textContent = state.term + ' years';
+  document.getElementById('lbl_tax').textContent = state.taxPct.toFixed(2) + '%';
+  document.getElementById('lbl_ins').textContent = fmt$(state.ins);
+  document.getElementById('lbl_hoa').textContent = fmt$(state.hoa);
+  document.getElementById('lbl_pmi').textContent = state.pmiPct.toFixed(2) + '%';
+  document.getElementById('lbl_appr').textContent = state.appr.toFixed(2) + '%';
+  document.getElementById('lbl_maint').textContent = state.maint.toFixed(2) + '%';
+  document.getElementById('lbl_close').textContent = state.closePct.toFixed(2) + '%';
+  document.getElementById('lbl_sell').textContent = state.sellPct.toFixed(2) + '%';
+  document.getElementById('lbl_extra').textContent = fmt$(state.extra);
+  document.getElementById('lbl_rent').textContent = fmt$(state.rent);
+  document.getElementById('lbl_rentInc').textContent = state.rentInc.toFixed(2) + '%';
+  document.getElementById('lbl_invRet').textContent = state.invRet.toFixed(2) + '%';
+  document.getElementById('lbl_debts').textContent = fmt$(state.debts);
+  document.getElementById('lbl_dtiCustom').textContent = state.dtiCustom.toFixed(0) + '%';
+  document.getElementById('lbl_taxGrowth').textContent = state.taxGrowth.toFixed(2) + '%';
+  document.getElementById('lbl_insGrowth').textContent = state.insGrowth.toFixed(2) + '%';
+  document.getElementById('lbl_movein').textContent = fmt$(state.movein);
+  document.getElementById('lbl_reserveMos').textContent = state.reserveMos;
+  document.getElementById('lbl_liquid').textContent = fmt$(state.liquid);
+  document.getElementById('lbl_savings').textContent = fmt$(state.savings);
+  document.getElementById('lbl_expenses').textContent = fmt$(state.expenses);
+  document.getElementById('lbl_emerg').textContent = state.emerg;
+  document.getElementById('lbl_maxLiqPct').textContent = state.maxLiqPct + '%';
+  document.getElementById('lbl_marg').textContent = state.marg + '%';
+  document.getElementById('lbl_salt').textContent = fmt$(state.salt);
+  document.getElementById('lbl_ltcg').textContent = state.ltcg + '%';
+  document.getElementById('lbl_income').textContent = fmt$(state.income);
+  document.getElementById('lbl_retire401k').textContent = state.retire401k + '%';
+  document.getElementById('lbl_empMatch').textContent = state.empMatch + '%';
+  document.getElementById('lbl_matchCap').textContent = state.matchCap + '%';
+  document.getElementById('lbl_retireReturn').textContent = state.retireReturn + '%';
+  document.getElementById('lbl_retireYears').textContent = state.retireYears;
+  document.getElementById('lbl_refiYear').textContent = state.refiYear;
+  document.getElementById('lbl_refiRate').textContent = state.refiRate.toFixed(2) + '%';
+  document.getElementById('lbl_refiTerm').textContent = state.refiTerm;
+  document.getElementById('lbl_refiClose').textContent = state.refiClose.toFixed(2) + '%';
+  document.getElementById('lbl_cashout').textContent = fmt$(state.cashout);
+
+  const sched = buildSchedule(state);
+  const apprRows = buildAppreciation(state, sched);
+  const rbRows = buildRentVsBuy(state, sched, apprRows);
+
+  // Monthly payment breakdown (use first month)
+  const first = sched.sched[0] || { tax:0, ins:0, pmi:0, hoa:0 };
+  const pi = sched.pi;
+  const total = pi + first.tax + first.ins + first.pmi + first.hoa;
+  document.getElementById('m_total').textContent = fmt$(total);
+  document.getElementById('m_pi').textContent = fmt$(pi);
+  document.getElementById('m_ti').textContent = fmt$(first.tax + first.ins);
+  document.getElementById('m_pmihoa').textContent = fmt$(first.pmi + first.hoa);
+  document.getElementById('b_pi').textContent = fmt$(pi);
+  document.getElementById('b_tax').textContent = fmt$(first.tax);
+  document.getElementById('b_ins').textContent = fmt$(first.ins);
+  document.getElementById('b_pmi').textContent = fmt$(first.pmi);
+  document.getElementById('b_hoa').textContent = fmt$(first.hoa);
+  document.getElementById('badge_pmi').textContent = first.pmi > 0 ? 'PMI active' : 'PMI off';
+  document.getElementById('badge_pmi').classList.toggle('on', first.pmi > 0);
+  document.getElementById('badge_extra').textContent = state.extra > 0 ? `+${fmt$(state.extra)}/mo extra` : 'No extra';
+  document.getElementById('badge_extra').classList.toggle('on', state.extra > 0);
+
+  // Overview metrics
+  document.getElementById('o_loan').textContent = fmt$(sched.loan);
+  document.getElementById('o_interest').textContent = fmt$(sched.totalInterest);
+  document.getElementById('o_payoff').textContent =
+    `Year ${Math.ceil(sched.payoffMonth/12)} (${sched.payoffMonth} mo)`;
+
+  // Total cost of ownership (30 years)
+  const finalRb = rbRows[rbRows.length-1];
+  const totalCost = finalRb.cumBuyCost;
+  document.getElementById('o_toc').textContent = fmt$(totalCost);
+
+  // Appreciation snapshots
+  const yr10 = apprRows[9] || apprRows[apprRows.length-1];
+  const yr30 = apprRows[29] || apprRows[apprRows.length-1];
+  document.getElementById('a_v10').textContent = fmt$(yr10.homeValue);
+  document.getElementById('a_e10').textContent = fmt$(yr10.net);
+  document.getElementById('a_v30').textContent = fmt$(yr30.homeValue);
+  document.getElementById('a_e30').textContent = fmt$(yr30.net);
+
+  const aTbody = document.querySelector('#appreciation_table tbody');
+  aTbody.innerHTML = apprRows.map(r => `
+    <tr>
+      <td>${r.year}</td>
+      <td>${fmt$(r.homeValue)}</td>
+      <td>${fmt$(r.balance)}</td>
+      <td>${fmt$(r.gross)}</td>
+      <td>${fmt$(r.sellingCosts)}</td>
+      <td>${fmt$(r.net)}</td>
+      <td>${fmt$(r.cumInterest)}</td>
+    </tr>
+  `).join('');
+
+  // Amortization table - first 12 months + year ends
+  const amortRows = [];
+  for (let i = 0; i < Math.min(12, sched.sched.length); i++) amortRows.push(sched.sched[i]);
+  for (let y = 2; y <= state.term; y++) {
+    const idx = y * 12 - 1;
+    if (sched.sched[idx]) amortRows.push(sched.sched[idx]);
+  }
+  document.querySelector('#amort_table tbody').innerHTML = amortRows.map(r => `
+    <tr>
+      <td>${r.month} (Yr ${Math.ceil(r.month/12)})</td>
+      <td>${fmt$(r.payment)}</td>
+      <td>${fmt$(r.principal)}</td>
+      <td>${fmt$(r.interest)}</td>
+      <td>${r.extra > 0 ? fmt$(r.extra) : '—'}</td>
+      <td>${fmt$(r.balance)}</td>
+    </tr>
+  `).join('');
+
+  // Rent vs Buy
+  const breakeven = findBreakeven(rbRows);
+  document.getElementById('rb_break').textContent = breakeven ? `Year ${breakeven}` : 'Never (within 30 yr)';
+  document.getElementById('rb_buy10').textContent = fmt$(rbRows[9].buyNet);
+  document.getElementById('rb_rent10').textContent = fmt$(rbRows[9].rentNet);
+  document.getElementById('rb_diff30').textContent = fmt$(rbRows[29].diff);
+
+  // Extra payment savings: rebuild a no-extra schedule and compare
+  const noExtraState = {...state, extra: 0};
+  const noExtraSched = buildSchedule(noExtraState);
+  const interestSaved = noExtraSched.totalInterest - sched.totalInterest;
+  const monthsSaved = noExtraSched.payoffMonth - sched.payoffMonth;
+  document.getElementById('ex_saved').textContent = fmt$(interestSaved);
+  document.getElementById('ex_faster').textContent =
+    monthsSaved > 0 ? `${Math.floor(monthsSaved/12)} yr ${monthsSaved%12} mo` : '—';
+  document.getElementById('ex_new').textContent =
+    `Month ${sched.payoffMonth} of ${state.term*12}`;
+  document.getElementById('ex_paid').textContent = fmt$(sched.totalExtra);
+
+  /* AFFORDABILITY */
+  // PITI = P&I + Tax + Insurance (PMI traditionally NOT in DTI calc, but lenders include it; we include it for conservativeness)
+  // Total housing also adds HOA. Standard DTI uses PITI + HOA + PMI.
+  const piti = pi + first.tax + first.ins + first.pmi + first.hoa; // total monthly housing burden
+  const housingMonthly = piti;
+  const totalMonthlyObligations = housingMonthly + state.debts;
+
+  document.getElementById('af_piti').textContent = fmt$(housingMonthly);
+  document.getElementById('af_housing').textContent = fmt$(housingMonthly);
+  document.getElementById('af_debts').textContent = fmt$(state.debts);
+  document.getElementById('af_total').textContent = fmt$(totalMonthlyObligations);
+
+  const standards = [
+    { name: 'Conservative (Ramsey 25%)',  front: 25, back: 25, comment: 'Most conservative; leaves room for everything else.' },
+    { name: 'Classic 28/36 rule',         front: 28, back: 36, comment: 'Conventional lender baseline.' },
+    { name: 'FHA upper limit (31/43)',    front: 31, back: 43, comment: 'Stretched but qualifies for FHA.' },
+    { name: 'Aggressive (35/45)',         front: 35, back: 45, comment: 'Risky — leaves little margin for shocks.' },
+    { name: `Custom (${state.dtiCustom}%)`, front: state.dtiCustom, back: state.dtiCustom + 8, comment: 'Your custom front-end; back-end set to front + 8 pts.' },
+  ];
+
+  const aff_tbody = document.getElementById('aff_table');
+  aff_tbody.innerHTML = standards.map(s => {
+    const reqFront = housingMonthly / (s.front / 100); // monthly gross
+    const reqBack = totalMonthlyObligations / (s.back / 100);
+    const reqMonthly = Math.max(reqFront, reqBack);
+    const reqAnnual = reqMonthly * 12;
+    return `
+      <tr>
+        <td>${s.name}</td>
+        <td>${s.front}%</td>
+        <td>${s.back}%</td>
+        <td><strong>${fmt$(reqAnnual)}</strong></td>
+        <td>${fmt$(reqMonthly)}</td>
+        <td style="color: var(--muted); font-size: 12px;">${s.comment}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // Overview quick-look (28/36 and Ramsey)
+  const reqStd = Math.max(housingMonthly / 0.28, totalMonthlyObligations / 0.36) * 12;
+  const reqRamsey = Math.max(housingMonthly / 0.25, totalMonthlyObligations / 0.25) * 12;
+  document.getElementById('o_income').textContent = fmt$(reqStd);
+  document.getElementById('o_income_cons').textContent = fmt$(reqRamsey);
+
+  /* CASH TO CLOSE */
+  const closingCosts = state.price * state.closePct / 100;
+  const dpDollar = downPaymentAmount(state);
+  const piti_for_reserves = pi + first.tax + first.ins + first.pmi + first.hoa;
+  const reservesAmt = piti_for_reserves * state.reserveMos;
+  const totalCashClose = dpDollar + closingCosts + state.movein + reservesAmt;
+  // Note: reserves stay in the account post-close, so "liquid after" = liquid - down - closing - movein
+  // (Not subtracting reserves because they remain liquid, just earmarked.)
+  const liquidAfter = state.liquid - (dpDollar + closingCosts + state.movein);
+
+  // Emergency fund covers FULL cost of living (housing + everything else)
+  const monthlyOutflows = state.expenses + piti_for_reserves;
+  const emergTarget = monthlyOutflows * state.emerg;
+  const retainFloor = Math.max(emergTarget, reservesAmt); // emergency fund usually dominates
+  // Two caps on down payment — use the more restrictive one
+  const retentionCap = state.liquid - closingCosts - state.movein - retainFloor;
+  const concentrationCap = state.liquid * (state.maxLiqPct / 100);
+  const bindingCap = retentionCap < concentrationCap ? 'retention' : 'concentration';
+  const maxSafeDp = Math.min(retentionCap, concentrationCap);
+  const maxSafeDpPct = state.price > 0 ? (Math.max(0, maxSafeDp) / state.price) * 100 : 0;
+
+  document.getElementById('cc_dp').textContent = fmt$(dpDollar);
+  document.getElementById('cc_closing').textContent = fmt$(closingCosts);
+  document.getElementById('cc_movein').textContent = fmt$(state.movein);
+  document.getElementById('cc_reserves').textContent = fmt$(reservesAmt);
+  document.getElementById('cc_total').textContent = fmt$(totalCashClose);
+  document.getElementById('cc_remaining').textContent = fmt$(liquidAfter);
+
+  document.getElementById('cc_outflows').textContent = fmt$(monthlyOutflows) + '/mo';
+  document.getElementById('cc_emerg').textContent = `${fmt$(emergTarget)} (${state.emerg}mo)`;
+  document.getElementById('cc_reserves2').textContent = `${fmt$(reservesAmt)} (${state.reserveMos}mo PITI)`;
+  document.getElementById('cc_retain').textContent = fmt$(retainFloor);
+
+  // Required liquid to satisfy concentration cap
+  const requiredLiquid = state.maxLiqPct > 0 ? dpDollar / (state.maxLiqPct / 100) : Infinity;
+  const liquidGap = state.liquid - requiredLiquid;
+
+  /* BUY TODAY ANALYSIS */
+  const monthlyRet = Math.pow(1 + state.invRet/100, 1/12) - 1;
+
+  // Liquidity check
+  document.getElementById('sv_liquid').textContent = fmt$(state.liquid);
+  const pctUsed = state.liquid > 0 ? (totalCashClose / state.liquid) * 100 : 100;
+  document.getElementById('sv_pct').textContent = pctUsed.toFixed(0) + '%';
+  document.getElementById('sv_after').textContent = fmt$(liquidAfter);
+  // Emergency fund = full monthly outflows × months (matches Cash to Close)
+  document.getElementById('sv_emerg').textContent = fmt$(emergTarget);
+
+  // Concentration cap
+  document.getElementById('sv_pct_label').textContent = state.maxLiqPct;
+  document.getElementById('sv_planned_dp').textContent = fmt$(dpDollar);
+  document.getElementById('sv_required_liquid').textContent = isFinite(requiredLiquid) ? fmt$(requiredLiquid) : '—';
+  document.getElementById('sv_current_liquid').textContent = fmt$(state.liquid);
+  const svGapEl = document.getElementById('sv_liquid_gap');
+  const svGapStatus = document.getElementById('sv_gap_status');
+  if (isFinite(requiredLiquid)) {
+    svGapEl.textContent = (liquidGap >= 0 ? '+' : '') + fmt$(liquidGap);
+    if (liquidGap >= 0) {
+      svGapEl.className = 'number delta-pos';
+      svGapStatus.textContent = '(surplus)';
+    } else {
+      svGapEl.className = 'number delta-neg';
+      svGapStatus.textContent = '(shortfall)';
+    }
+  } else {
+    svGapEl.textContent = '—';
+    svGapStatus.textContent = '';
+  }
+
+  // Time to reach required liquid goal
+  const svTimeEl = document.getElementById('sv_time_to_goal');
+  if (!isFinite(requiredLiquid) || liquidGap >= 0) {
+    svTimeEl.textContent = liquidGap >= 0 ? 'Already there' : '—';
+  } else if (state.savings <= 0) {
+    svTimeEl.textContent = 'Need savings';
+  } else {
+    const shortfall = -liquidGap;
+    // NPER formula: n = log(1 + (FV * r) / PMT) / log(1+r)
+    let monthsToGoal;
+    if (monthlyRet > 0) {
+      monthsToGoal = Math.log(1 + (shortfall * monthlyRet) / state.savings) / Math.log(1 + monthlyRet);
+    } else {
+      monthsToGoal = shortfall / state.savings;
+    }
+    if (!isFinite(monthsToGoal) || monthsToGoal < 0) {
+      svTimeEl.textContent = '—';
+    } else {
+      const yrsGoal = Math.floor(monthsToGoal / 12);
+      const mosGoal = Math.round(monthsToGoal - yrsGoal * 12);
+      svTimeEl.textContent = yrsGoal > 0 ? `${yrsGoal} yr ${mosGoal} mo` : `${mosGoal} mo`;
+    }
+  }
+
+  // Recommendation — max safe down payment = liquid - closing - movein - retainFloor
+  // (retainFloor already accounts for max(emergency, lender reserves))
+  const recBox = document.getElementById('sv_recommendation');
+  if (liquidAfter < 0) {
+    recBox.innerHTML = `
+      <div style="color:var(--bad);font-weight:600;margin-bottom:6px;">Not ready to buy at these terms</div>
+      <div style="color:var(--muted);font-size:13px;">
+        Need ${fmt$(-liquidAfter)} more in liquid assets. Options:
+        <ul style="margin: 4px 0 0 16px;">
+          <li>Increase down payment savings by ${fmt$(Math.max(0, -liquidAfter))} before buying</li>
+          <li>Lower the home price target, or reduce down payment %</li>
+          <li>Reduce reserves or move-in budget (least preferred)</li>
+        </ul>
+      </div>`;
+  } else if (maxSafeDp >= dpDollar) {
+    const pctOfLiquid = (dpDollar / state.liquid * 100).toFixed(0);
+    recBox.innerHTML = `
+      <div style="color:var(--good);font-weight:600;margin-bottom:6px;">✓ Recommended: proceed at current down payment</div>
+      <div style="color:var(--muted);font-size:13px;">
+        You'd use <strong>${pctOfLiquid}%</strong> of liquid assets for the down payment.
+        After closing, <strong>${fmt$(liquidAfter)}</strong> stays liquid — comfortably above the ${fmt$(emergTarget)} emergency target.
+        Your max <em>safe</em> down payment (preserving emergency fund) is ${fmt$(Math.max(0, maxSafeDp))}.
+      </div>`;
+  } else if (maxSafeDp > 0) {
+    const safePct = (maxSafeDp / state.price * 100).toFixed(1);
+    recBox.innerHTML = `
+      <div style="color:var(--warn);font-weight:600;margin-bottom:6px;">⚠ Down payment too aggressive for your liquidity</div>
+      <div style="color:var(--muted);font-size:13px;">
+        Current plan uses ${fmt$(dpDollar)} but max safe down (after preserving ${state.emerg}-month emergency fund) is <strong>${fmt$(maxSafeDp)}</strong> (${safePct}% of home price).
+        Either drop the down payment %, save more first, or accept dipping below emergency target.
+      </div>`;
+  } else {
+    recBox.innerHTML = `
+      <div style="color:var(--bad);font-weight:600;margin-bottom:6px;">⚠ Liquid assets won't cover closing + emergency fund</div>
+      <div style="color:var(--muted);font-size:13px;">
+        After closing costs, move-in, and a ${state.emerg}-month emergency fund, you'd have nothing left for the down payment.
+        Save more before buying, or lower the home price.
+      </div>`;
+  }
+
+  /* TAX BENEFITS */
+  // Get yr 1 and yr 30 figures from amort table
+  // Year 1 interest = sum of first 12 months interest
+  let int1 = 0;
+  for (let i = 0; i < Math.min(12, sched.sched.length); i++) int1 += sched.sched[i].interest;
+  // Year 30 interest = year 30 (or last year) - that's the interest paid IN year 30
+  let int30 = 0;
+  const startMonth = 29 * 12;
+  for (let i = startMonth; i < Math.min(startMonth + 12, sched.sched.length); i++) {
+    int30 += sched.sched[i].interest;
+  }
+
+  // Property tax — escalated
+  const pt1 = (state.taxPct/100) * state.price; // year 1
+  const pt30 = pt1 * Math.pow(1 + state.taxGrowth/100, 29); // year 30 (29 yrs of growth)
+
+  // SALT capped at $10K
+  const saltDed1 = Math.min(10000, pt1 + state.salt);
+  const saltDed30 = Math.min(10000, pt30 + state.salt);
+
+  // Mortgage interest deduction cap: post-TCJA limit on first $750K of loan principal
+  // If loan > $750K, only deduct portion of interest = 750k/loan
+  const intDedLimit = 750_000;
+  const ratio = sched.loan > intDedLimit ? intDedLimit / sched.loan : 1.0;
+  const intDed1 = int1 * ratio;
+  const intDed30 = int30 * ratio;
+
+  const itemized1 = intDed1 + saltDed1;
+  const itemized30 = intDed30 + saltDed30;
+
+  // Standard deduction 2024
+  const standard = state.filing === 'married' ? 29200 : 14600;
+  const benefit1 = Math.max(0, itemized1 - standard) * (state.marg / 100);
+
+  // Lifetime tax savings — approximate by summing across years
+  let lifetimeBenefit = 0;
+  for (let y = 1; y <= state.term; y++) {
+    let intY = 0;
+    const startM = (y-1) * 12;
+    for (let i = startM; i < Math.min(startM + 12, sched.sched.length); i++) intY += sched.sched[i].interest;
+    const ptY = pt1 * Math.pow(1 + state.taxGrowth/100, y - 1);
+    const saltY = Math.min(10000, ptY + state.salt);
+    const itY = intY * ratio + saltY;
+    lifetimeBenefit += Math.max(0, itY - standard) * (state.marg / 100);
+  }
+
+  document.getElementById('tx_itemized').textContent = fmt$(itemized1);
+  document.getElementById('tx_standard').textContent = fmt$(standard);
+  document.getElementById('tx_save1').textContent = fmt$(benefit1);
+  document.getElementById('tx_saveLife').textContent = fmt$(lifetimeBenefit);
+  document.getElementById('tx_int1').textContent = fmt$(int1);
+  document.getElementById('tx_int30').textContent = fmt$(int30);
+  document.getElementById('tx_pt1').textContent = fmt$(pt1);
+  document.getElementById('tx_pt30').textContent = fmt$(pt30);
+  document.getElementById('tx_salt1').textContent = fmt$(saltDed1);
+  document.getElementById('tx_salt30').textContent = fmt$(saltDed30);
+  document.getElementById('tx_it1').textContent = fmt$(itemized1);
+  document.getElementById('tx_it30').textContent = fmt$(itemized30);
+
+  // Capital gains
+  const exclusion = state.filing === 'married' ? 500_000 : 250_000;
+  const saleValue30 = apprRows[29].homeValue;
+  const sellingCosts30 = apprRows[29].sellingCosts;
+  const costBasis = state.price + closingCosts;
+  const grossGain = Math.max(0, saleValue30 - sellingCosts30 - costBasis);
+  const taxableGain = Math.max(0, grossGain - exclusion);
+  const cgTax = taxableGain * (state.ltcg / 100);
+  const afterTaxEquity = apprRows[29].net - cgTax;
+
+  document.getElementById('cg_excl').textContent = fmt$(exclusion);
+  document.getElementById('cg_gain').textContent = fmt$(grossGain);
+  document.getElementById('cg_tax_gain').textContent = fmt$(taxableGain);
+  document.getElementById('cg_after_tax').textContent = fmt$(afterTaxEquity);
+
+  /* RETIREMENT TRADEOFF */
+  const monthlyGross = state.income / 12;
+  const annualContrib = state.income * (state.retire401k / 100);
+  const monthlyContrib = annualContrib / 12;
+
+  // Employer match: match% of contribution, capped at matchCap% of salary
+  const maxMatchableContrib = state.income * (state.matchCap / 100);
+  const actualMatchableContrib = Math.min(annualContrib, maxMatchableContrib);
+  const empMatchAmt = actualMatchableContrib * (state.empMatch / 100);
+  const monthlyMatch = empMatchAmt / 12;
+  const totalRetireMonthly = monthlyContrib + monthlyMatch;
+
+  // Housing costs
+  const housingPctGross = (housingMonthly / monthlyGross) * 100;
+  const retirePctGross = (state.retire401k + (empMatchAmt / state.income * 100));
+  const combinedPct = housingPctGross + state.retire401k;
+
+  // After-tax income estimate (rough)
+  const effectiveTaxRate = state.marg * 0.7; // rough effective rate vs marginal
+  const netMonthlyIncome = monthlyGross * (1 - effectiveTaxRate / 100);
+  const afterHousingExpenses = netMonthlyIncome - housingMonthly - state.expenses;
+
+  // 401k limit for 2024
+  const limit401k = 23000;
+  const maxMonthly401k = limit401k / 12;
+  const maxFeasible401k = Math.min(maxMonthly401k, Math.max(0, afterHousingExpenses + monthlyContrib));
+
+  // Opportunity cost: own vs rent difference invested
+  const monthlyDiff = housingMonthly - state.rent;
+  const retireReturnMonthly = Math.pow(1 + state.retireReturn / 100, 1/12) - 1;
+  // FV of investing monthlyDiff for retireYears
+  let fvDiff = 0;
+  if (retireReturnMonthly > 0 && monthlyDiff !== 0) {
+    fvDiff = monthlyDiff * ((Math.pow(1 + retireReturnMonthly, state.retireYears * 12) - 1) / retireReturnMonthly);
+  } else {
+    fvDiff = monthlyDiff * state.retireYears * 12;
+  }
+
+  // Home equity at retirement (using retireYears as sale point)
+  const homeValueAtRetire = state.price * Math.pow(1 + state.appr / 100, state.retireYears);
+  // Find loan balance at retireYears
+  const retireMonth = Math.min(state.retireYears * 12, sched.sched.length);
+  const balanceAtRetire = retireMonth > 0 && sched.sched[retireMonth - 1] ? sched.sched[retireMonth - 1].balance : 0;
+  const equityAtRetire = homeValueAtRetire - balanceAtRetire - (homeValueAtRetire * state.sellPct / 100);
+
+  // Net comparison: home equity vs invested difference
+  // If monthlyDiff > 0 (owning costs more), fvDiff is positive = what you gave up
+  // Net = home equity - fvDiff (if positive, home equity wins)
+  const netCompare = equityAtRetire - fvDiff;
+
+  // Retirement balance projections
+  // Current trajectory: invest totalRetireMonthly for retireYears
+  let projCurrent = 0;
+  if (retireReturnMonthly > 0) {
+    projCurrent = totalRetireMonthly * ((Math.pow(1 + retireReturnMonthly, state.retireYears * 12) - 1) / retireReturnMonthly);
+  } else {
+    projCurrent = totalRetireMonthly * state.retireYears * 12;
+  }
+
+  // If maxed 401k + match
+  const maxContribWithMatch = maxMonthly401k + (Math.min(maxMonthly401k, maxMatchableContrib / 12) * state.empMatch / 100);
+  let projMax = 0;
+  if (retireReturnMonthly > 0) {
+    projMax = maxContribWithMatch * ((Math.pow(1 + retireReturnMonthly, state.retireYears * 12) - 1) / retireReturnMonthly);
+  } else {
+    projMax = maxContribWithMatch * state.retireYears * 12;
+  }
+
+  const retireShortfall = projMax - projCurrent;
+
+  // Update UI
+  document.getElementById('rt_income').textContent = fmt$(monthlyGross) + '/mo';
+  document.getElementById('rt_current_contrib').textContent = fmt$(monthlyContrib) + '/mo';
+  document.getElementById('rt_emp_match').textContent = fmt$(monthlyMatch) + '/mo';
+  document.getElementById('rt_total_retire').textContent = fmt$(totalRetireMonthly) + '/mo';
+
+  document.getElementById('rt_housing').textContent = fmt$(housingMonthly);
+  document.getElementById('rt_housing_pct').textContent = housingPctGross.toFixed(1) + '%';
+  document.getElementById('rt_retire_pct').textContent = retirePctGross.toFixed(1) + '%';
+  document.getElementById('rt_combined_pct').textContent = combinedPct.toFixed(1) + '%';
+
+  document.getElementById('rt_net_income').textContent = fmt$(netMonthlyIncome);
+  document.getElementById('rt_after_expenses').textContent = fmt$(afterHousingExpenses);
+  document.getElementById('rt_401k_limit').textContent = fmt$(limit401k) + '/yr';
+  document.getElementById('rt_max_401k').textContent = fmt$(maxFeasible401k) + '/mo';
+
+  document.getElementById('rt_rent').textContent = fmt$(state.rent);
+  document.getElementById('rt_diff').textContent = (monthlyDiff >= 0 ? '+' : '') + fmt$(monthlyDiff);
+  document.getElementById('rt_years_label').textContent = state.retireYears;
+  document.getElementById('rt_fv_diff').textContent = fmt$(Math.abs(fvDiff));
+  document.getElementById('rt_net_compare').textContent = (netCompare >= 0 ? '+' : '') + fmt$(netCompare);
+
+  document.getElementById('rt_proj_current').textContent = fmt$(projCurrent);
+  document.getElementById('rt_proj_max').textContent = fmt$(projMax);
+  document.getElementById('rt_shortfall').textContent = fmt$(retireShortfall);
+
+  // Recommendation
+  const rtRec = document.getElementById('rt_recommendation');
+  if (housingPctGross > 35) {
+    rtRec.innerHTML = `<div style="background:rgba(248,113,113,0.1);border:1px solid var(--bad);color:var(--bad);padding:14px;border-radius:8px;">
+      <div style="font-weight:600;margin-bottom:4px;">Housing may crowd out retirement savings</div>
+      <div style="font-size:12px;">
+        Housing consumes ${housingPctGross.toFixed(1)}% of gross income — above the 28-35% comfort zone.
+        This leaves ${retirePctGross.toFixed(1)}% for retirement (${state.retire401k}% yours + ${(retirePctGross - state.retire401k).toFixed(1)}% match).
+        ${state.retire401k < 10 ? 'Consider increasing 401k contribution to at least capture full employer match.' : ''}
+        ${afterHousingExpenses < 0 ? '<br><br><strong>Warning:</strong> After housing and expenses, cash flow is negative. This is unsustainable.' : ''}
+      </div>
+    </div>`;
+  } else if (state.retire401k < state.matchCap) {
+    rtRec.innerHTML = `<div style="background:rgba(251,191,36,0.1);border:1px solid var(--warn);color:var(--warn);padding:14px;border-radius:8px;">
+      <div style="font-weight:600;margin-bottom:4px;">You may be leaving money on the table</div>
+      <div style="font-size:12px;">
+        You're contributing ${state.retire401k}% but your employer matches up to ${state.matchCap}%.
+        Increasing to ${state.matchCap}% would add ${fmt$((state.matchCap - state.retire401k) / 100 * state.income * state.empMatch / 100)}/yr in free employer match.
+        Housing is ${housingPctGross.toFixed(1)}% of income — reasonable, so you likely have room.
+      </div>
+    </div>`;
+  } else if (annualContrib < limit401k && afterHousingExpenses > (limit401k / 12 - monthlyContrib)) {
+    rtRec.innerHTML = `<div style="background:rgba(251,191,36,0.1);border:1px solid var(--warn);color:var(--warn);padding:14px;border-radius:8px;">
+      <div style="font-weight:600;margin-bottom:4px;">Room to increase retirement savings</div>
+      <div style="font-size:12px;">
+        You're contributing ${fmt$(annualContrib)}/yr but could go up to the ${fmt$(limit401k)} 401k limit.
+        Housing is ${housingPctGross.toFixed(1)}% — you have cash flow to potentially increase contributions.
+        Maxing out could add ${fmt$(retireShortfall)} to your retirement by year ${state.retireYears}.
+      </div>
+    </div>`;
+  } else {
+    rtRec.innerHTML = `<div style="background:rgba(74,222,128,0.1);border:1px solid var(--good);color:var(--good);padding:14px;border-radius:8px;">
+      <div style="font-weight:600;margin-bottom:4px;">Good balance between housing and retirement</div>
+      <div style="font-size:12px;">
+        Housing is ${housingPctGross.toFixed(1)}% of gross income (under 28% is ideal).
+        You're saving ${retirePctGross.toFixed(1)}% toward retirement including employer match.
+        ${annualContrib >= limit401k ? 'You\'re maxing out your 401k — excellent!' : `Current 401k contribution: ${fmt$(annualContrib)}/yr.`}
+      </div>
+    </div>`;
+  }
+
+  /* ROI ANALYSIS */
+  const roiYears = [5, 10, 15, 20, 30];
+  const initialCash = dpDollar + closingCosts;
+
+  // Update investment rate display
+  document.getElementById('roi_inv_rate').textContent = state.invRet;
+
+  roiYears.forEach(yr => {
+    const months = yr * 12;
+
+    // Calculate cumulative payments up to this year
+    let cumPayments = 0;
+    let cumMaint = 0;
+    for (let m = 0; m < Math.min(months, sched.sched.length); m++) {
+      const row = sched.sched[m];
+      cumPayments += row.payment + row.extra + row.tax + row.ins + row.pmi + row.hoa;
+      // Maintenance: annual rate on appreciated home value, divided by 12
+      const homeValueAtMonth = state.price * Math.pow(1 + state.appr / 100, (m + 1) / 12);
+      cumMaint += (state.maint / 100) * homeValueAtMonth / 12;
+    }
+
+    const totalCashInvested = initialCash + cumPayments + cumMaint;
+
+    // Net equity at sale
+    const homeValue = state.price * Math.pow(1 + state.appr / 100, yr);
+    const loanBalance = months <= sched.sched.length && sched.sched[months - 1]
+      ? sched.sched[months - 1].balance
+      : 0;
+    const sellingCosts = homeValue * (state.sellPct / 100);
+    const netEquity = homeValue - loanBalance - sellingCosts;
+
+    // 1. Simple ROI
+    const simpleROI = totalCashInvested > 0
+      ? ((netEquity - totalCashInvested) / totalCashInvested) * 100
+      : 0;
+
+    // 2. CAGR (on initial cash only)
+    const cagr = initialCash > 0 && netEquity > 0
+      ? (Math.pow(netEquity / initialCash, 1 / yr) - 1) * 100
+      : 0;
+
+    // 3. IRR - build cash flow array
+    // Month 0: negative initial outlay
+    // Months 1 to N: negative monthly payments
+    // Month N: positive net equity (sale proceeds)
+    const cashFlows = [-initialCash];
+    for (let m = 0; m < Math.min(months, sched.sched.length); m++) {
+      const row = sched.sched[m];
+      const monthlyPayment = row.payment + row.extra + row.tax + row.ins + row.pmi + row.hoa;
+      const homeValueAtMonth = state.price * Math.pow(1 + state.appr / 100, (m + 1) / 12);
+      const monthlyMaint = (state.maint / 100) * homeValueAtMonth / 12;
+      cashFlows.push(-(monthlyPayment + monthlyMaint));
+    }
+    // Add sale proceeds at the end
+    cashFlows[cashFlows.length - 1] += netEquity;
+
+    const irr = calculateIRR(cashFlows) * 100;
+
+    // Market comparison: what if same cash flows were invested in market?
+    const monthlyReturn = Math.pow(1 + state.invRet / 100, 1/12) - 1;
+    let marketValue = 0;
+    // Initial investment grows for full period
+    marketValue += initialCash * Math.pow(1 + monthlyReturn, months);
+    // Each monthly payment grows for remaining months
+    for (let m = 0; m < Math.min(months, sched.sched.length); m++) {
+      const row = sched.sched[m];
+      const monthlyPayment = row.payment + row.extra + row.tax + row.ins + row.pmi + row.hoa;
+      const homeValueAtMonth = state.price * Math.pow(1 + state.appr / 100, (m + 1) / 12);
+      const monthlyMaint = (state.maint / 100) * homeValueAtMonth / 12;
+      const totalMonthly = monthlyPayment + monthlyMaint;
+      const monthsRemaining = months - m - 1;
+      marketValue += totalMonthly * Math.pow(1 + monthlyReturn, monthsRemaining);
+    }
+
+    const diff = netEquity - marketValue;
+
+    // Update UI
+    document.getElementById(`roi_initial_${yr}`).textContent = fmt$(initialCash);
+    document.getElementById(`roi_payments_${yr}`).textContent = fmt$(cumPayments);
+    document.getElementById(`roi_maint_${yr}`).textContent = fmt$(cumMaint);
+    document.getElementById(`roi_totalcash_${yr}`).textContent = fmt$(totalCashInvested);
+    document.getElementById(`roi_equity_${yr}`).textContent = fmt$(netEquity);
+
+    document.getElementById(`roi_simple_${yr}`).textContent = simpleROI.toFixed(1) + '%';
+    document.getElementById(`roi_simple_${yr}`).style.color = simpleROI >= 0 ? 'var(--good)' : 'var(--bad)';
+
+    document.getElementById(`roi_cagr_${yr}`).textContent = cagr.toFixed(1) + '%';
+    document.getElementById(`roi_cagr_${yr}`).style.color = cagr >= 0 ? 'var(--good)' : 'var(--bad)';
+
+    document.getElementById(`roi_irr_${yr}`).textContent = isNaN(irr) ? 'N/A' : irr.toFixed(1) + '%';
+    document.getElementById(`roi_irr_${yr}`).style.color = !isNaN(irr) && irr >= 0 ? 'var(--good)' : 'var(--bad)';
+
+    document.getElementById(`roi_market_${yr}`).textContent = fmt$(marketValue);
+    document.getElementById(`roi_diff_${yr}`).textContent = (diff >= 0 ? '+' : '') + fmt$(diff);
+    document.getElementById(`roi_diff_${yr}`).style.color = diff >= 0 ? 'var(--good)' : 'var(--bad)';
+  });
+
+  /* REFINANCE */
+  if (!state.refiEnabled) {
+    // Show disabled placeholder in the refi tab
+    document.getElementById('rf_verdict').innerHTML = `
+      <div style="background:rgba(139,149,167,0.1);border:1px solid var(--border);color:var(--muted);padding:16px;border-radius:8px;text-align:center;">
+        <div style="font-weight:600;margin-bottom:6px;font-size:13px;">Refinance simulation is off</div>
+        <div style="font-size:12px;">Toggle <strong>"Include refi in analysis"</strong> to <strong>On</strong> in the left panel to model a refinance scenario.</div>
+      </div>`;
+    // Blank all the metrics
+    ['rf_bal','rf_newloan','rf_close','rf_cash','rf_oldPI','rf_newPI','rf_dPI',
+     'rf_oldMos','rf_newMos','rf_dMos','rf_oldInt','rf_newInt','rf_dInt',
+     'rf_oldCost','rf_newCost','rf_dCost','rf_savings','rf_breakeven',
+     'rf_intSaved','rf_netCost'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = '—'; el.className = ''; }
+    });
+  } else {
+  // 1. Find balance at refi point
+  const refiMonth = Math.min(state.refiYear * 12, sched.sched.length);
+  const balAtRefi = refiMonth > 0 && sched.sched[refiMonth - 1] ? sched.sched[refiMonth - 1].balance : sched.loan;
+  // 2. New loan = balance + cashout + (closing rolled in if elected)
+  const refiClosingCosts = (balAtRefi + state.cashout) * state.refiClose / 100;
+  const refiClosingCostsFinal = state.rollClosing === 'yes'
+    ? (balAtRefi + state.cashout) * state.refiClose / 100 / (1 - state.refiClose/100) // back into to handle the loan-grows-by-closing
+    : refiClosingCosts;
+  // Simpler approach: if rolled, new loan = bal + cashout + closing (compute closing on (bal+cashout) for simplicity)
+  const closingForLoan = (balAtRefi + state.cashout) * state.refiClose / 100;
+  const newLoan = state.rollClosing === 'yes'
+    ? balAtRefi + state.cashout + closingForLoan
+    : balAtRefi + state.cashout;
+  const cashOutOfPocket = state.rollClosing === 'yes' ? 0 : closingForLoan;
+
+  // 3. New monthly P&I
+  const newPI = monthlyPI(newLoan, state.refiRate, state.refiTerm);
+
+  // 4. Old continuing P&I: same as current pi (since fixed rate)
+  // Old months remaining = state.term*12 - refiMonth
+  const oldMonthsRemaining = Math.max(0, state.term * 12 - refiMonth);
+  // Old interest remaining = sum of interest from refiMonth onward
+  let oldIntRemaining = 0;
+  for (let i = refiMonth; i < sched.sched.length; i++) {
+    oldIntRemaining += sched.sched[i].interest;
+  }
+  // Old total cost remaining = remaining payments * pi (approx)
+  const oldCostRemaining = sched.pi * oldMonthsRemaining;
+
+  // New schedule cost
+  const newMonths = state.refiTerm * 12;
+  const newTotalPayments = newPI * newMonths;
+  const newIntRemaining = newTotalPayments - newLoan;
+  const newCostRemaining = newPI * newMonths + cashOutOfPocket;
+
+  // Monthly savings (positive = refi is cheaper monthly)
+  const monthlySavings = sched.pi - newPI;
+  // Break-even: closing costs paid upfront / monthly savings
+  // If rolled in, "out of pocket" is 0 but the new loan is bigger so monthly is higher.
+  let refiBreakeven = null;
+  if (monthlySavings > 0) {
+    refiBreakeven = cashOutOfPocket > 0 ? Math.ceil(cashOutOfPocket / monthlySavings) : 0;
+  }
+
+  document.getElementById('rf_bal').textContent = fmt$(balAtRefi);
+  document.getElementById('rf_newloan').textContent = fmt$(newLoan);
+  document.getElementById('rf_close').textContent = fmt$(closingForLoan);
+  document.getElementById('rf_cash').textContent = fmt$(state.cashout);
+  document.getElementById('rf_oldPI').textContent = fmt$(sched.pi);
+  document.getElementById('rf_newPI').textContent = fmt$(newPI);
+  const dPIVal = newPI - sched.pi;
+  document.getElementById('rf_dPI').textContent = (dPIVal >= 0 ? '+' : '') + fmt$(dPIVal) + '/mo';
+  document.getElementById('rf_dPI').className = dPIVal <= 0 ? 'delta-pos' : 'delta-neg';
+  document.getElementById('rf_oldMos').textContent = `${oldMonthsRemaining} mo (${(oldMonthsRemaining/12).toFixed(1)} yr)`;
+  document.getElementById('rf_newMos').textContent = `${newMonths} mo (${state.refiTerm} yr)`;
+  document.getElementById('rf_dMos').textContent = (newMonths - oldMonthsRemaining >= 0 ? '+' : '') + (newMonths - oldMonthsRemaining) + ' mo';
+  document.getElementById('rf_oldInt').textContent = fmt$(oldIntRemaining);
+  document.getElementById('rf_newInt').textContent = fmt$(newIntRemaining);
+  const dInt = newIntRemaining - oldIntRemaining;
+  document.getElementById('rf_dInt').textContent = (dInt >= 0 ? '+' : '') + fmt$(dInt);
+  document.getElementById('rf_dInt').className = dInt <= 0 ? 'delta-pos' : 'delta-neg';
+  document.getElementById('rf_oldCost').textContent = fmt$(oldCostRemaining);
+  document.getElementById('rf_newCost').textContent = fmt$(newCostRemaining);
+  const dCost = newCostRemaining - oldCostRemaining;
+  document.getElementById('rf_dCost').textContent = (dCost >= 0 ? '+' : '') + fmt$(dCost);
+  document.getElementById('rf_dCost').className = dCost <= 0 ? 'delta-pos' : 'delta-neg';
+
+  document.getElementById('rf_savings').textContent = (monthlySavings >= 0 ? '' : '-') + fmt$(Math.abs(monthlySavings)) + '/mo';
+  document.getElementById('rf_breakeven').textContent = refiBreakeven === null
+    ? 'Never (no savings)'
+    : refiBreakeven === 0
+      ? 'Immediate'
+      : `${refiBreakeven} mo (${(refiBreakeven/12).toFixed(1)} yr)`;
+  document.getElementById('rf_intSaved').textContent = fmt$(oldIntRemaining - newIntRemaining);
+  document.getElementById('rf_netCost').textContent = (dCost >= 0 ? '+' : '') + fmt$(dCost);
+
+  // Verdict
+  const verdictBox = document.getElementById('rf_verdict');
+  const stayYearsAssumption = 10; // benchmark
+  if (state.refiRate >= state.rate && state.cashout === 0) {
+    verdictBox.innerHTML = `<div style="background:rgba(248,113,113,0.1);border:1px solid var(--bad);color:var(--bad);padding:12px;border-radius:8px;">
+      ✗ Refi rate (${state.refiRate}%) is not lower than current rate (${state.rate}%). Refinancing makes no sense without cash-out or other strategic reasons.
+    </div>`;
+  } else if (monthlySavings <= 0) {
+    verdictBox.innerHTML = `<div style="background:rgba(251,191,36,0.1);border:1px solid var(--warn);color:var(--warn);padding:12px;border-radius:8px;">
+      ⚠ New monthly payment is higher than current — likely because of shorter term or higher rate. Refi only helps if you specifically want to accelerate payoff or take cash out.
+    </div>`;
+  } else if (refiBreakeven === null || refiBreakeven > stayYearsAssumption * 12) {
+    verdictBox.innerHTML = `<div style="background:rgba(251,191,36,0.1);border:1px solid var(--warn);color:var(--warn);padding:12px;border-radius:8px;">
+      ⚠ Break-even is ${refiBreakeven ? `${(refiBreakeven/12).toFixed(1)} years` : 'never'} — longer than a typical hold. Only refinance if you're confident you'll stay this long.
+    </div>`;
+  } else if (dInt > 0) {
+    verdictBox.innerHTML = `<div style="background:rgba(251,191,36,0.1);border:1px solid var(--warn);color:var(--warn);padding:12px;border-radius:8px;">
+      ⚠ Monthly payment drops by ${fmt$(monthlySavings)}, but total <em>lifetime</em> interest rises by ${fmt$(dInt)} because you extended the term. Good for cash-flow relief, expensive long-term.
+    </div>`;
+  } else {
+    verdictBox.innerHTML = `<div style="background:rgba(74,222,128,0.1);border:1px solid var(--good);color:var(--good);padding:12px;border-radius:8px;">
+      ✓ Refinance is favorable. Saves ${fmt$(monthlySavings)}/mo. Break-even in ${refiBreakeven === 0 ? 'immediately' : `${refiBreakeven} months (${(refiBreakeven/12).toFixed(1)} yr)`}. Lifetime interest saved: ${fmt$(oldIntRemaining - newIntRemaining)}.
+    </div>`;
+  }
+  } // end refi-enabled block
+
+  /* CHARTS */
+  destroyCharts();
+  const chartOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: '#e8ecf1', font: { size: 11 } } },
+      tooltip: { backgroundColor: '#232936', titleColor: '#e8ecf1', bodyColor: '#e8ecf1' }
+    },
+    scales: {
+      x: { ticks: { color: '#8b95a7' }, grid: { color: '#2d3441' } },
+      y: { ticks: { color: '#8b95a7', callback: v => '$' + (v/1000).toFixed(0) + 'k' }, grid: { color: '#2d3441' } }
+    }
+  };
+
+  // Payment doughnut
+  charts.payment = new Chart(document.getElementById('chart_payment'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Principal & Interest', 'Property Tax', 'Insurance', 'PMI', 'HOA'],
+      datasets: [{
+        data: [pi, first.tax, first.ins, first.pmi, first.hoa],
+        backgroundColor: ['#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa'],
+        borderColor: '#1a1f2a', borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#e8ecf1', font: { size: 11 } } },
+        title: { display: true, text: 'Monthly payment breakdown (Year 1)', color: '#e8ecf1', font: { size: 13 } }
+      }
+    }
+  });
+
+  // Balance over time
+  const balLabels = sched.sched.filter((_, i) => i % 12 === 0).map((r) => Math.ceil(r.month/12));
+  const balData = sched.sched.filter((_, i) => i % 12 === 0).map(r => r.balance);
+  const cumIntData = sched.sched.filter((_, i) => i % 12 === 0).map(r => r.cumInterest);
+  const cumPrincData = sched.sched.filter((_, i) => i % 12 === 0).map(r => r.cumPrincipal);
+
+  charts.balance = new Chart(document.getElementById('chart_balance'), {
+    type: 'line',
+    data: {
+      labels: balLabels,
+      datasets: [
+        { label: 'Loan balance', data: balData, borderColor: '#f87171', backgroundColor: 'rgba(248,113,113,0.1)', tension: 0.2, fill: true },
+        { label: 'Cumulative interest', data: cumIntData, borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.05)', tension: 0.2 },
+        { label: 'Cumulative principal', data: cumPrincData, borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.05)', tension: 0.2 },
+      ]
+    },
+    options: {...chartOpts, plugins: { ...chartOpts.plugins, title: { display: true, text: 'Loan over time (yrs)', color: '#e8ecf1', font: { size: 13 } } } }
+  });
+
+  // Appreciation chart
+  const aLabels = apprRows.map(r => r.year);
+  charts.appreciation = new Chart(document.getElementById('chart_appreciation'), {
+    type: 'line',
+    data: {
+      labels: aLabels,
+      datasets: [
+        { label: 'Home value', data: apprRows.map(r => r.homeValue), borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.15)', tension: 0.2, fill: true },
+        { label: 'Loan balance', data: apprRows.map(r => r.balance), borderColor: '#f87171', tension: 0.2 },
+        { label: 'Net equity (after sell costs)', data: apprRows.map(r => r.net), borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.1)', tension: 0.2, fill: '+1' },
+      ]
+    },
+    options: {...chartOpts, plugins: { ...chartOpts.plugins, title: { display: true, text: 'Home value vs. loan balance vs. net equity', color: '#e8ecf1', font: { size: 13 } } } }
+  });
+
+  // Rent vs Buy chart
+  charts.rentbuy = new Chart(document.getElementById('chart_rentbuy'), {
+    type: 'line',
+    data: {
+      labels: rbRows.map(r => r.year),
+      datasets: [
+        { label: 'Buy (net)', data: rbRows.map(r => r.buyNet), borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.1)', tension: 0.2, fill: true },
+        { label: 'Rent (net)', data: rbRows.map(r => r.rentNet), borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.1)', tension: 0.2, fill: true },
+      ]
+    },
+    options: {...chartOpts, plugins: { ...chartOpts.plugins, title: { display: true, text: 'Net wealth: Buying vs. Renting', color: '#e8ecf1', font: { size: 13 } } } }
+  });
+
+  // Extra payment chart - compare balance curves
+  const baseLabels = noExtraSched.sched.filter((_, i) => i % 12 === 0).map(r => Math.ceil(r.month/12));
+  const baseData = noExtraSched.sched.filter((_, i) => i % 12 === 0).map(r => r.balance);
+  const extraData = sched.sched.filter((_, i) => i % 12 === 0).map(r => r.balance);
+
+  charts.extra = new Chart(document.getElementById('chart_extra'), {
+    type: 'line',
+    data: {
+      labels: baseLabels,
+      datasets: [
+        { label: 'Balance (no extra)', data: baseData, borderColor: '#8b95a7', borderDash: [5,5], tension: 0.2 },
+        { label: 'Balance (with extra)', data: extraData, borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.1)', tension: 0.2, fill: true },
+      ]
+    },
+    options: {...chartOpts, plugins: { ...chartOpts.plugins, title: { display: true, text: 'Loan balance with vs. without extra payments', color: '#e8ecf1', font: { size: 13 } } } }
+  });
+}
+
+/* ========================================================================
+   SCENARIO COMPARE
+   ======================================================================== */
+function saveScenario() {
+  const name = (document.getElementById('scenName').value || `Scenario ${scenarios.length + 1}`).trim();
+  const snap = JSON.parse(JSON.stringify(state));
+  snap.__name = name;
+  const sched = buildSchedule(state);
+  const apprRows = buildAppreciation(state, sched);
+  const rbRows = buildRentVsBuy(state, sched, apprRows);
+  snap.__results = {
+    monthlyTotal: sched.pi + (sched.sched[0]?.tax||0) + (sched.sched[0]?.ins||0) + (sched.sched[0]?.pmi||0) + (sched.sched[0]?.hoa||0),
+    pi: sched.pi,
+    totalInterest: sched.totalInterest,
+    totalCost30: rbRows[29].cumBuyCost,
+    netEquity30: apprRows[29].net,
+    homeValue30: apprRows[29].homeValue,
+    breakeven: findBreakeven(rbRows),
+    payoffMonth: sched.payoffMonth,
+  };
+  scenarios.push(snap);
+  if (scenarios.length > 5) scenarios.shift();
+  document.getElementById('scenName').value = '';
+  renderScenarios();
+}
+
+function deleteScenario(i) {
+  scenarios.splice(i, 1);
+  renderScenarios();
+}
+
+function renderScenarios() {
+  const list = document.getElementById('scen_list');
+  list.innerHTML = scenarios.map((s, i) => `
+    <div class="scenario-card">
+      <div>
+        <div class="name">${s.__name}</div>
+        <div class="meta">
+          ${fmt$(s.price)} home · ${(s.downMode==='pct' ? s.downValue : (s.downValue/s.price*100).toFixed(0))}% down · ${s.rate}% · ${s.term}yr
+          ${s.extra > 0 ? ` · +${fmt$(s.extra)}/mo` : ''}
+        </div>
+      </div>
+      <button class="btn danger" onclick="deleteScenario(${i})">Remove</button>
+    </div>
+  `).join('');
+
+  const container = document.getElementById('compare_container');
+  if (scenarios.length === 0) {
+    container.innerHTML = '<p class="help">Save a scenario (left panel) to start comparing. Up to 5 scenarios.</p>';
+    return;
+  }
+
+  // Compare table
+  const rows = [
+    ['Home price', s => fmt$(s.price)],
+    ['Down payment', s => `${(s.downMode==='pct' ? s.downValue : (s.downValue/s.price*100)).toFixed(1)}% (${fmt$(s.downMode==='pct' ? s.price*s.downValue/100 : s.downValue)})`],
+    ['Rate', s => s.rate.toFixed(2) + '%'],
+    ['Term', s => s.term + ' yr'],
+    ['Extra/mo', s => s.extra > 0 ? fmt$(s.extra) : '—'],
+    ['Monthly total (yr 1)', s => fmt$(s.__results.monthlyTotal)],
+    ['P&I', s => fmt$(s.__results.pi)],
+    ['Total interest', s => fmt$(s.__results.totalInterest)],
+    ['Payoff (months)', s => s.__results.payoffMonth],
+    ['Total cost (30 yr)', s => fmt$(s.__results.totalCost30)],
+    ['Home value @ yr 30', s => fmt$(s.__results.homeValue30)],
+    ['Net equity @ yr 30', s => fmt$(s.__results.netEquity30)],
+    ['Buy beats rent at', s => s.__results.breakeven ? `Yr ${s.__results.breakeven}` : 'Never (30yr)'],
+  ];
+
+  container.innerHTML = `
+    <table class="compare-table">
+      <thead>
+        <tr><th>Metric</th>${scenarios.map(s => `<th>${s.__name}</th>`).join('')}</tr>
+      </thead>
+      <tbody>
+        ${rows.map(([label, fn]) => `
+          <tr><td>${label}</td>${scenarios.map(s => `<td>${fn(s)}</td>`).join('')}</tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+/* ========================================================================
+   INPUT BINDINGS
+   ======================================================================== */
+const bind = (id, key, parse = parseFloat) => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    const v = parse(el.value);
+    if (!isNaN(v)) {
+      state[key] = v;
+      compute();
+    }
+  });
+};
+bind('price', 'price');
+bind('downValue', 'downValue');
+bind('rate', 'rate');
+bind('taxPct', 'taxPct');
+bind('ins', 'ins');
+bind('hoa', 'hoa');
+bind('pmiPct', 'pmiPct');
+bind('appr', 'appr');
+bind('maint', 'maint');
+bind('closePct', 'closePct');
+bind('sellPct', 'sellPct');
+bind('extra', 'extra');
+bind('rent', 'rent');
+bind('rentInc', 'rentInc');
+bind('invRet', 'invRet');
+bind('debts', 'debts');
+bind('dtiCustom', 'dtiCustom');
+bind('taxGrowth', 'taxGrowth');
+bind('insGrowth', 'insGrowth');
+bind('movein', 'movein');
+bind('reserveMos', 'reserveMos');
+bind('liquid', 'liquid');
+bind('savings', 'savings');
+bind('expenses', 'expenses');
+bind('emerg', 'emerg');
+bind('maxLiqPct', 'maxLiqPct');
+bind('marg', 'marg');
+bind('salt', 'salt');
+bind('ltcg', 'ltcg');
+bind('income', 'income');
+bind('retire401k', 'retire401k');
+bind('empMatch', 'empMatch');
+bind('matchCap', 'matchCap');
+bind('retireReturn', 'retireReturn');
+bind('retireYears', 'retireYears', parseInt);
+bind('refiYear', 'refiYear', parseInt);
+bind('refiRate', 'refiRate');
+bind('refiClose', 'refiClose');
+bind('cashout', 'cashout');
+document.getElementById('filing').addEventListener('change', e => {
+  state.filing = e.target.value; compute();
+});
+document.getElementById('refiTerm').addEventListener('change', e => {
+  state.refiTerm = parseInt(e.target.value, 10); compute();
+});
+document.getElementById('tg_refiOff').addEventListener('click', () => {
+  state.refiEnabled = false;
+  document.getElementById('tg_refiOff').classList.add('active');
+  document.getElementById('tg_refiOn').classList.remove('active');
+  compute();
+});
+document.getElementById('tg_refiOn').addEventListener('click', () => {
+  state.refiEnabled = true;
+  document.getElementById('tg_refiOn').classList.add('active');
+  document.getElementById('tg_refiOff').classList.remove('active');
+  compute();
+});
+document.getElementById('tg_rollNo').addEventListener('click', () => {
+  state.rollClosing = 'no';
+  document.getElementById('tg_rollNo').classList.add('active');
+  document.getElementById('tg_rollYes').classList.remove('active');
+  compute();
+});
+document.getElementById('tg_rollYes').addEventListener('click', () => {
+  state.rollClosing = 'yes';
+  document.getElementById('tg_rollYes').classList.add('active');
+  document.getElementById('tg_rollNo').classList.remove('active');
+  compute();
+});
+
+document.getElementById('term').addEventListener('change', e => {
+  state.term = parseInt(e.target.value, 10);
+  compute();
+});
+
+document.querySelectorAll('.toggle-row button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const mode = btn.dataset.mode;
+    state.downMode = mode;
+    document.getElementById('tg_pct').classList.toggle('active', mode === 'pct');
+    document.getElementById('tg_amt').classList.toggle('active', mode === 'amt');
+    // Translate current down value into the right unit
+    const dpField = document.getElementById('downValue');
+    if (mode === 'pct') {
+      // Convert current $ -> %
+      const newVal = (state.downValue / state.price) * 100;
+      dpField.value = newVal.toFixed(1);
+      state.downValue = parseFloat(newVal.toFixed(2));
+    } else {
+      const newVal = state.price * (state.downValue / 100);
+      dpField.value = Math.round(newVal);
+      state.downValue = newVal;
+    }
+    compute();
+  });
+});
+
+document.getElementById('saveScen').addEventListener('click', saveScenario);
+
+// Advanced tab toggles
+const tabToggles = [
+  { checkbox: 'toggle_taxes', tab: 'taxes' },
+  { checkbox: 'toggle_retirement', tab: 'retirement' },
+  { checkbox: 'toggle_extra', tab: 'extra' },
+  { checkbox: 'toggle_refi', tab: 'refi' },
+  { checkbox: 'toggle_roi', tab: 'roi' },
+  { checkbox: 'toggle_compare', tab: 'compare' },
+];
+tabToggles.forEach(({ checkbox, tab }) => {
+  const cb = document.getElementById(checkbox);
+  const btn = document.querySelector(`.tabs button[data-tab="${tab}"]`);
+  cb.addEventListener('change', () => {
+    if (cb.checked) {
+      btn.classList.remove('hidden-tab');
+    } else {
+      btn.classList.add('hidden-tab');
+      // If this tab was active, switch to overview
+      if (btn.classList.contains('active')) {
+        btn.classList.remove('active');
+        document.getElementById('tab_' + tab).classList.remove('active');
+        document.querySelector('.tabs button[data-tab="overview"]').classList.add('active');
+        document.getElementById('tab_overview').classList.add('active');
+      }
+    }
+  });
+});
+
+// Tabs
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab_' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ========================================================================
+   TOOLTIPS — description + learning resources for every input
+   ======================================================================== */
+const TOOLTIPS = {
+  price: {
+    desc: "The purchase price of the home before any down payment or closing costs. This drives loan size, taxes, and PMI thresholds.",
+    links: [
+      ["CFPB: Determining what you can afford", "https://www.consumerfinance.gov/owning-a-home/process/prepare/know-what-you-can-afford/"],
+      ["Investopedia: Home Price", "https://www.investopedia.com/terms/h/home-price-index.asp"],
+    ],
+  },
+  downValue: {
+    desc: "Cash paid upfront — reduces the loan amount. 20%+ avoids PMI on conventional loans. Lower down payments mean larger loans, higher monthly payments, and PMI until you hit 20% equity.",
+    links: [
+      ["CFPB: How much should you put down?", "https://www.consumerfinance.gov/ask-cfpb/how-much-should-i-put-toward-a-down-payment-en-149/"],
+      ["NerdWallet: Down Payment Guide", "https://www.nerdwallet.com/article/mortgages/how-much-down-payment-for-house"],
+    ],
+  },
+  rate: {
+    desc: "Annual interest rate on the mortgage. Even a 0.5% difference compounds enormously over 30 years. Rates depend on your credit, loan type, down payment, and broader market conditions.",
+    links: [
+      ["Freddie Mac PMMS — current rates", "https://www.freddiemac.com/pmms"],
+      ["Investopedia: Mortgage Rate", "https://www.investopedia.com/terms/m/mortgage-rate.asp"],
+    ],
+  },
+  term: {
+    desc: "Length of the loan in years. 30-year is most common (lowest monthly payment). 15-year has higher payments but ~half the total interest. Shorter terms generally get slightly lower rates.",
+    links: [
+      ["CFPB: 15-yr vs 30-yr mortgages", "https://www.consumerfinance.gov/ask-cfpb/whats-the-difference-between-a-15-year-and-a-30-year-fixed-rate-mortgage-en-99/"],
+    ],
+  },
+  taxPct: {
+    desc: "Annual property tax as a percentage of home value. National average ~1.1%, but ranges from <0.3% (Hawaii) to >2.5% (NJ, IL). Check your county assessor for local rates.",
+    links: [
+      ["Tax Foundation: Property tax by state", "https://taxfoundation.org/data/all/state/property-taxes-by-state-county-2024/"],
+      ["Investopedia: Property Tax", "https://www.investopedia.com/terms/p/propertytax.asp"],
+    ],
+  },
+  taxGrowth: {
+    desc: "Annual growth rate for property tax. California caps annual growth at 2% (Prop 13). Most states reassess on sale or periodically; unbounded growth is uncommon but possible.",
+    links: [
+      ["California Prop 13 explainer", "https://lao.ca.gov/Publications/Report/3497"],
+      ["NCSL: State property tax assessment", "https://www.ncsl.org/financial-services/property-tax-assessment"],
+    ],
+  },
+  ins: {
+    desc: "Annual homeowners insurance premium. Average US is ~$1,800/yr but varies widely (Florida and California can be 2-4× higher due to climate risk). Lenders require it.",
+    links: [
+      ["NAIC: Homeowners insurance basics", "https://content.naic.org/cipr-topics/homeowners-insurance"],
+      ["Insurance Information Institute", "https://www.iii.org/article/how-much-homeowners-insurance-do-i-need"],
+    ],
+  },
+  insGrowth: {
+    desc: "How fast premiums rise annually. National average ~5-7% recently, but climate-affected markets (FL, CA, TX) see 15-30%+ jumps. Insurance is one of the fastest-growing line items in homeownership.",
+    links: [
+      ["Insurify: 2024 home insurance trends", "https://insurify.com/insights/home-insurance-trends/"],
+    ],
+  },
+  hoa: {
+    desc: "Homeowners Association fees. Common in condos, townhomes, planned communities. Covers shared maintenance, amenities, and reserves. Not tax-deductible for primary residences.",
+    links: [
+      ["Investopedia: HOA Fees", "https://www.investopedia.com/terms/h/homeowners-association-fees.asp"],
+    ],
+  },
+  pmiPct: {
+    desc: "Private Mortgage Insurance — required when down payment is <20% on conventional loans. Protects the lender, not you. Typically 0.3-1.5% of loan annually. Drops off automatically at 78% LTV.",
+    links: [
+      ["CFPB: What is PMI?", "https://www.consumerfinance.gov/ask-cfpb/what-is-private-mortgage-insurance-en-122/"],
+      ["Investopedia: PMI", "https://www.investopedia.com/mortgage/insurance/"],
+    ],
+  },
+  appr: {
+    desc: "Annual home value growth. Long-run US average is ~3-4% nominal. Varies enormously by metro and decade. Be conservative for long horizons — past appreciation doesn't predict the future.",
+    links: [
+      ["FHFA House Price Index", "https://www.fhfa.gov/data/hpi"],
+      ["Case-Shiller historical data", "https://www.spglobal.com/spdji/en/indices/indicators/sp-corelogic-case-shiller-us-national-home-price-nsa-index/"],
+    ],
+  },
+  maint: {
+    desc: "Annual maintenance and repair cost as % of home value. Rule of thumb is 1%/yr, but ranges 1-4% depending on age, climate, and how DIY you are. Older homes need more.",
+    links: [
+      ["Investopedia: Real cost of homeownership", "https://www.investopedia.com/articles/mortgages-real-estate/12/cost-of-owning-home.asp"],
+    ],
+  },
+  closePct: {
+    desc: "Closing costs: lender fees, title insurance, escrow, recording, prepaid items. Typically 2-5% of purchase price. Some are negotiable; some are fixed by location.",
+    links: [
+      ["CFPB: Closing costs explainer", "https://www.consumerfinance.gov/owning-a-home/loan-estimate/"],
+      ["NerdWallet: Closing cost calculator", "https://www.nerdwallet.com/article/mortgages/closing-costs-mortgage-fees-explained"],
+    ],
+  },
+  sellPct: {
+    desc: "Selling costs at exit: agent commissions (usually 5-6%, though changing post-NAR settlement), transfer taxes, title, repairs/staging. Subtracted from net equity at sale.",
+    links: [
+      ["NAR commission settlement explainer", "https://www.nar.realtor/the-facts/nar-settlement-faqs"],
+      ["Investopedia: Cost of selling a home", "https://www.investopedia.com/articles/personal-finance/093015/how-much-does-it-cost-sell-house.asp"],
+    ],
+  },
+  extra: {
+    desc: "Extra principal added to each monthly mortgage payment. Goes entirely toward principal — shortens the loan and saves interest. Most powerful in the early years.",
+    links: [
+      ["Investopedia: Prepaying your mortgage", "https://www.investopedia.com/articles/personal-finance/082216/4-reasons-not-pay-your-mortgage-early.asp"],
+    ],
+  },
+  rent: {
+    desc: "Your current (or comparable) monthly rent. Used in the rent-vs-buy comparison as the alternative housing cost path.",
+    links: [
+      ["NYT: Rent vs Buy calculator (classic)", "https://www.nytimes.com/interactive/2024/upshot/buy-rent-calculator.html"],
+    ],
+  },
+  rentInc: {
+    desc: "Annual rent growth rate. US long-run average ~3%, but recently 5-8% in many metros. Rent control or stabilization (in some cities) caps this.",
+    links: [
+      ["Zillow Observed Rent Index", "https://www.zillow.com/research/data/"],
+    ],
+  },
+  invRet: {
+    desc: "Expected annual return on invested money — the opportunity cost of using cash for a down payment. S&P 500 long-run nominal ~10%; balanced 60/40 portfolio ~6-7%. Use a realistic, conservative number.",
+    links: [
+      ["Vanguard: Long-term capital market assumptions", "https://corporate.vanguard.com/content/corporatesite/us/en/corp/articles/vcmm-portfolio-construction.html"],
+    ],
+  },
+  movein: {
+    desc: "Lump-sum spend right after closing: furniture, immediate repairs, locksmith, moving truck, basic supplies. Often underestimated — $5K-$20K typical for new homes.",
+    links: [
+      ["Bankrate: Hidden costs after buying", "https://www.bankrate.com/real-estate/hidden-costs-of-buying-a-home/"],
+    ],
+  },
+  reserveMos: {
+    desc: "Months of PITI the lender wants to see in your account post-closing. Conventional loans usually want 2 months; jumbo and investor loans want 6+.",
+    links: [
+      ["Fannie Mae reserve requirements", "https://selling-guide.fanniemae.com/sel/b3-4.1-01/minimum-reserve-requirements"],
+    ],
+  },
+  liquid: {
+    desc: "Total liquid (easily accessible) assets: checking, savings, brokerage, money market. Excludes retirement accounts (401k, IRA) — those have penalties/restrictions for early withdrawal.",
+    links: [
+      ["Investopedia: Liquid assets", "https://www.investopedia.com/terms/l/liquidasset.asp"],
+    ],
+  },
+  savings: {
+    desc: "How much you save toward this goal each month. Used to project when you can reach your target down payment + closing + reserves.",
+    links: [
+      ["NerdWallet: How to save for a house", "https://www.nerdwallet.com/article/mortgages/how-to-save-for-a-house"],
+    ],
+  },
+  expenses: {
+    desc: "Total monthly household spend excluding mortgage: groceries, utilities, transport, childcare, subscriptions, dining, healthcare. Used to size your emergency fund target.",
+    links: [
+      ["Investopedia: Emergency fund basics", "https://www.investopedia.com/terms/e/emergency_fund.asp"],
+    ],
+  },
+  emerg: {
+    desc: "Months of expenses to keep liquid as a safety net. Standard guidance: 3 months for dual stable incomes, 6 months for typical households, 12 months for variable income or sole earner.",
+    links: [
+      ["CFPB: Building a savings cushion", "https://www.consumerfinance.gov/an-essential-guide-to-building-an-emergency-fund/"],
+      ["Vanguard: Emergency fund guide", "https://investor.vanguard.com/investor-resources-education/emergency-fund"],
+    ],
+  },
+  maxLiqPct: {
+    desc: "Concentration cap — the max share of your liquid wealth you're willing to lock into one illiquid asset (your home equity). Even if you have ample liquid above your emergency fund, you may not want to put it all into one house. Common targets: 40-60%.",
+    links: [
+      ["Investopedia: Concentration risk", "https://www.investopedia.com/terms/c/concentrationrisk.asp"],
+      ["Bogleheads: Asset allocation principles", "https://www.bogleheads.org/wiki/Asset_allocation"],
+    ],
+  },
+  filing: {
+    desc: "Tax filing status. Affects standard deduction ($14,600 single / $29,200 MFJ for 2024) and the Section 121 capital gains exclusion at sale ($250K single / $500K married).",
+    links: [
+      ["IRS: Filing status", "https://www.irs.gov/filing/individuals/filing-status"],
+    ],
+  },
+  marg: {
+    desc: "Your top federal income tax bracket. Used to compute the actual cash value of itemized deductions. 2024 brackets: 10/12/22/24/32/35/37%. State tax not included here.",
+    links: [
+      ["IRS 2024 tax brackets", "https://www.irs.gov/newsroom/irs-provides-tax-inflation-adjustments-for-tax-year-2024"],
+      ["Tax Foundation: Brackets", "https://taxfoundation.org/data/all/federal/2024-tax-brackets/"],
+    ],
+  },
+  salt: {
+    desc: "State + local income (or sales) taxes paid annually, excluding property tax. Combined with property tax for the SALT deduction, capped at $10K federally (Tax Cuts and Jobs Act of 2017).",
+    links: [
+      ["IRS: SALT deduction overview", "https://www.irs.gov/taxtopics/tc503"],
+      ["Tax Policy Center: SALT cap", "https://www.taxpolicycenter.org/briefing-book/what-deduction-state-and-local-taxes"],
+    ],
+  },
+  ltcg: {
+    desc: "Long-term capital gains tax rate at sale. Federal rates are 0/15/20% based on income. Add state cap gains if applicable. Only applies to gain in excess of the $250K/$500K Section 121 exclusion.",
+    links: [
+      ["IRS: Capital gains rates", "https://www.irs.gov/taxtopics/tc409"],
+      ["IRS Pub 523: Sale of home", "https://www.irs.gov/publications/p523"],
+    ],
+  },
+  debts: {
+    desc: "Total monthly minimum payments on other debts: car loans, student loans, credit cards, personal loans. Used for back-end DTI — lenders combine housing + other debts.",
+    links: [
+      ["CFPB: What is DTI?", "https://www.consumerfinance.gov/ask-cfpb/what-is-a-debt-to-income-ratio-en-1791/"],
+    ],
+  },
+  dtiCustom: {
+    desc: "Your personal front-end DTI ceiling (housing / gross income). Lower = more breathing room. 28% is the classic conservative ceiling. We auto-set back-end DTI to your custom + 8 points.",
+    links: [
+      ["Investopedia: DTI explained", "https://www.investopedia.com/terms/d/dti.asp"],
+    ],
+  },
+  refiYear: {
+    desc: "When (in years) you'd refinance the loan. Refi pulls remaining balance from the amortization at that point. Typical homeowner refis 3–7 years in if rates drop meaningfully.",
+    links: [
+      ["CFPB: When to refinance", "https://www.consumerfinance.gov/owning-a-home/process/refinance/"],
+    ],
+  },
+  refiRate: {
+    desc: "Interest rate on the refinanced loan. Conventional wisdom: refi if you can drop ≥0.75–1% from current, though break-even math is more rigorous.",
+    links: [
+      ["Freddie Mac PMMS — current rates", "https://www.freddiemac.com/pmms"],
+      ["Investopedia: Refinance basics", "https://www.investopedia.com/terms/r/refinance.asp"],
+    ],
+  },
+  refiTerm: {
+    desc: "Length of the new loan. Resetting to 30yr lowers monthly payment but extends total interest paid. Shorter (15/20yr) keeps you on the original payoff trajectory.",
+    links: [
+      ["NerdWallet: Refi term considerations", "https://www.nerdwallet.com/article/mortgages/refinance-15-year-or-30-year-mortgage"],
+    ],
+  },
+  refiClose: {
+    desc: "Closing costs on the refi as % of new loan size. Typical 2–5%. 'No-cost' refis exist but bake the costs into a higher rate.",
+    links: [
+      ["CFPB: Refinance closing costs", "https://www.consumerfinance.gov/owning-a-home/process/refinance/closing-costs/"],
+    ],
+  },
+  cashout: {
+    desc: "Cash taken out at refi (home equity converted to cash). Increases new loan size and total interest. Common uses: renovations, debt consolidation, college tuition.",
+    links: [
+      ["Investopedia: Cash-out refi", "https://www.investopedia.com/terms/c/cashout_refinance.asp"],
+    ],
+  },
+};
+
+function injectTooltips() {
+  Object.entries(TOOLTIPS).forEach(([id, data]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Find the label for this input — walk up to .field then find its <label>
+    const field = el.closest('.field');
+    if (!field) return;
+    const label = field.querySelector('label');
+    if (!label || label.querySelector('.tip')) return;
+
+    const tip = document.createElement('span');
+    tip.className = 'tip';
+    tip.textContent = '?';
+    tip.setAttribute('aria-label', 'Help');
+
+    const pop = document.createElement('span');
+    pop.className = 'tip-pop';
+    let html = `<div>${data.desc}</div>`;
+    if (data.links && data.links.length) {
+      html += `<div class="links"><div class="links-label">Learn more</div>`;
+      data.links.forEach(([text, url]) => {
+        html += `<a href="${url}" target="_blank" rel="noopener">${text} ↗</a>`;
+      });
+      html += `</div>`;
+    }
+    pop.innerHTML = html;
+    tip.appendChild(pop);
+
+    // Wrap the existing text node(s) in a span so they stay grouped with the tip
+    // under the label's flex layout. Only do this once per label.
+    const valueSpan = label.querySelector('.value');
+    let textWrap = label.querySelector('.label-text');
+    if (!textWrap) {
+      textWrap = document.createElement('span');
+      textWrap.className = 'label-text';
+      // Move all non-.value children into the wrap
+      const moved = [];
+      label.childNodes.forEach(n => {
+        if (n.nodeType === 3 || (n.nodeType === 1 && !n.classList.contains('value'))) {
+          moved.push(n);
+        }
+      });
+      moved.forEach(n => textWrap.appendChild(n));
+      label.insertBefore(textWrap, valueSpan || null);
+    }
+    textWrap.appendChild(tip);
+
+    // Flip popup below if near top of viewport
+    tip.addEventListener('mouseenter', () => {
+      const rect = tip.getBoundingClientRect();
+      if (rect.top < 280) pop.classList.add('below');
+      else pop.classList.remove('below');
+    });
+  });
+}
+
+injectTooltips();
+
+// Initial render
+compute();
+</script>
+</body>
+</html>
